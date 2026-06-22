@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SessionStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum SummaryDepth {
+  BRIEF
+  STANDARD
+  DETAILED
+}
+
+model User {
+  id              String           @id
+  email           String?          @unique
+  name            String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  readingSessions ReadingSession[]
+  quizAttempts    QuizAttempt[]
+}
+
+model ReadingSession {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String
+  sourceText  String        @db.Text
+  wordCount   Int?
+  sourceUrl   String?
+  status      SessionStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  completedAt DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary  Summary?
+  quizzes  Quiz[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, status])
+}
+
+model Summary {
+  id               String       @id @default(cuid())
+  sessionId        String       @unique
+  depth            SummaryDepth
+  content          String       @db.Text
+  model            String
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime     @default(now())
+
+  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id            String        @id @default(cuid())
+  sessionId     String
+  questionCount Int
+  model         String
+  createdAt     DateTime      @default(now())
+
+  session   ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@index([sessionId])
+}
+
+model Question {
+  id           String @id @default(cuid())
+  quizId       String
+  orderIndex   Int
+  prompt       String @db.Text
+  options      Json
+  correctIndex Int
+  explanation  String? @db.Text
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, orderIndex])
+}
+
+model QuizAttempt {
+  id           String   @id @default(cuid())
+  quizId       String
+  userId       String
+  answers      Json
+  score        Float
+  correctCount Int
+  totalCount   Int
+  createdAt    DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([quizId, userId])
+}
