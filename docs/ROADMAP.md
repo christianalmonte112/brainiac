@@ -29,90 +29,94 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 ---
 
-## Phase 1 — Core Data Layer
+## Phase 1 — Core Data Layer ✅
 
-**Status:** Planned  
-**Target:** Week 1–2
+**Status:** Complete  
+**Target:** June 2025
 
-| Item | Priority | Description |
-|------|----------|-------------|
-| Prisma schema implementation | P0 | Models per `docs/SCHEMA.md` |
-| Supabase project + connection pooling | P0 | Dev and prod databases |
-| User sync via Clerk webhook | P0 | Create/update `User` on sign-up |
-| Reading session CRUD | P0 | Create, read, update, delete sessions |
-| Dashboard shell | P0 | Session list with empty state |
+| Item | Priority | Status |
+|------|----------|--------|
+| Prisma schema implementation | P0 | ✅ |
+| Supabase project + connection pooling | P0 | ✅ |
+| Initial migration (`User`, `ReadingSession`, `Summary`, `Quiz`, `Question`, `QuizAttempt`) | P0 | ✅ |
+| GitHub repo created | P0 | ✅ |
+| Full documentation suite | P0 | ✅ |
+| Deployed to Vercel | P0 | ✅ |
 
-**Exit criteria:** Users can create, view, and delete reading sessions; data persists in Supabase.
+**Exit criteria:** Database connected, schema migrated, app deployed to production. ✅
 
 ---
 
-## Phase 2 — AI Summaries
+## Phase 2 — Onboarding & Core Reader
 
-**Status:** Planned  
+**Status:** In Progress  
 **Target:** Week 2–3
 
-| Item | Priority | Description |
-|------|----------|-------------|
-| Anthropic client wrapper | P0 | `lib/anthropic.ts` with error handling |
-| Summary generation Server Action | P0 | Claude-powered summaries |
-| Summary depth selector | P1 | Brief / standard / detailed |
-| Summary caching | P0 | Store on session; skip re-generation |
-| Loading & error states | P0 | UX for async AI calls |
-| Word count + limit warnings | P1 | Pre-flight validation |
+> **Build order:** Onboarding baseline assessment comes **first**, before the chunk reader.
 
-**Exit criteria:** Users generate and view AI summaries for any session text.
+| Item | Priority | Feature | Description |
+|------|----------|---------|-------------|
+| Onboarding baseline assessment | P0 | F-017 | 5-minute test: reading speed, comprehension, vocabulary, inference |
+| Core reader UI and layout | P0 | — | Reader shell, navigation, session layout |
+| Chunk reader with progressive unlock | P0 | — | Text delivered in chunks; next chunk unlocks after comprehension check |
+| Micro-summarization | P1 | — | Short AI summaries per chunk |
+| Vocabulary mapper | P1 | — | Highlight and define unfamiliar words inline |
+| Progress dashboard | P1 | F-006 | Session history, stats vs. baseline |
+| Anthropic SDK integration | P0 | — | `npm install @anthropic-ai/sdk`; server-side Claude client |
 
----
-
-## Phase 3 — Comprehension Quizzes
-
-**Status:** Planned  
-**Target:** Week 3–4
-
-| Item | Priority | Description |
-|------|----------|-------------|
-| Quiz generation via Claude | P0 | Structured JSON output |
-| Quiz UI (multiple choice) | P0 | Interactive client component |
-| Answer submission + scoring | P0 | Server-side score calculation |
-| Results screen with explanations | P0 | Show correct/incorrect + rationale |
-| Quiz retakes | P1 | Multiple attempts per quiz |
-| Session completion flow | P1 | Mark session COMPLETED after quiz |
-
-**Exit criteria:** Full read → summarize → quiz → score loop works end-to-end.
+**Exit criteria:** New users complete baseline assessment; can read text in progressive chunks; dashboard shows progress vs. baseline.
 
 ---
 
-## Phase 4 — Progress & Polish
+## Phase 3 — Voice & Multilingual
 
 **Status:** Planned  
 **Target:** Week 4–5
 
-| Item | Priority | Description |
-|------|----------|-------------|
-| Dashboard analytics | P1 | Avg score, session count, recent activity |
-| Reading streak | P2 | Consecutive days with activity |
-| Session search / filter | P2 | By date, title, score |
-| Landing page redesign | P1 | Brainiac branding, value prop, CTA |
-| Responsive mobile layout | P1 | Core flows work on mobile |
-| Accessibility audit | P1 | WCAG 2.1 AA for auth + quiz flows |
-| Error monitoring (Sentry) | P2 | Production error tracking |
+| Item | Priority | Feature | Description |
+|------|----------|---------|-------------|
+| Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API |
+| Multilingual reading and text-to-speech | P1 | F-011 | Read and listen in multiple languages |
+| Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension |
+| AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth |
+| Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring |
 
-**Exit criteria:** App feels polished; dashboard shows meaningful progress data.
+**Exit criteria:** Users can listen to text in multiple languages; record voice summaries; generate AI summaries and quizzes.
+
+---
+
+## Phase 4 — Games & Community
+
+**Status:** Planned  
+**Target:** Week 5–7
+
+| Item | Priority | Feature | Description |
+|------|----------|---------|-------------|
+| Visual learning games | P2 | F-013 | Interactive visual comprehension exercises |
+| Memory games | P2 | F-014 | Retention-focused recall games tied to session content |
+| Listening games with AI-broken-down song lyrics | P2 | F-015 | Song lyric analysis and listening comprehension |
+| Reddit-style community platform | P2 | F-016 | User posts, discussions, shared reading recommendations |
+| Dashboard analytics & streaks | P1 | F-006 | Avg score, session count, reading streak |
+| Landing page redesign | P1 | — | Brainiac branding, value prop, CTA |
+| Responsive mobile layout | P1 | — | Core flows work on mobile |
+
+**Exit criteria:** Games available for practice; community platform MVP live; dashboard shows meaningful progress data.
 
 ---
 
 ## Phase 5 — Beta Launch
 
 **Status:** Planned  
-**Target:** Week 5–6
+**Target:** Week 7–8
 
 | Item | Priority | Description |
 |------|----------|-------------|
-| Production deployment | P0 | Vercel + Supabase prod |
 | Environment hardening | P0 | Secrets, rate limits, CORS |
-| Onboarding flow | P1 | First-session guided tour |
+| User sync via Clerk webhook | P0 | Create/update `User` on sign-up |
+| Monthly progress report vs. baseline | P1 | Email or in-app report showing growth since F-017 |
 | Feedback widget | P2 | In-app feedback collection |
 | Beta user invite list | P1 | Controlled rollout |
+| E2E tests with Playwright + Clerk | P2 | Auth and core flow coverage |
 | Performance testing | P1 | Load test AI endpoints |
 
 **Exit criteria:** 10–50 beta users completing full sessions without critical bugs.
@@ -149,7 +153,6 @@ Prioritized ideas for after beta launch. Not committed to dates.
 |---------|-------|--------|
 | Team / classroom mode (Clerk Orgs) | High | High |
 | Subscription billing | High | High |
-| Multi-language support | Medium | High |
 | Mobile native apps | Medium | Very High |
 | Integration with Readwise / Notion | Medium | Medium |
 
@@ -159,10 +162,11 @@ Prioritized ideas for after beta launch. Not committed to dates.
 
 | Item | Phase to Address |
 |------|------------------|
-| Rename package from `readwise-app` to `brainiac` | Phase 1 |
+| Rename package from `readwise-app` to `brainiac` | Phase 2 |
 | Add Zod validation for all Server Actions | Phase 2 |
-| Prisma client singleton for serverless | Phase 1 |
-| E2E tests with Playwright + Clerk testing | Phase 4 |
+| Prisma client singleton for serverless | Phase 2 |
+| `BaselineAssessment` migration | Phase 2 |
+| E2E tests with Playwright + Clerk testing | Phase 5 |
 | CI pipeline (lint, typecheck, migrate) | Phase 5 |
 
 ---

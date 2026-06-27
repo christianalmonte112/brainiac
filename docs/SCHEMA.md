@@ -14,6 +14,7 @@ This document describes the data model for Brainiac. The canonical source is `pr
 ```mermaid
 erDiagram
     User ||--o{ ReadingSession : owns
+    User ||--o| BaselineAssessment : has
     ReadingSession ||--o| Summary : has
     ReadingSession ||--o{ Quiz : has
     Quiz ||--|{ Question : contains
@@ -25,6 +26,18 @@ erDiagram
         string name
         datetime createdAt
         datetime updatedAt
+    }
+
+    BaselineAssessment {
+        string id PK
+        string userId FK
+        int readingSpeedWPM
+        float comprehensionScore
+        float vocabularyScore
+        float inferenceScore
+        float overallScore
+        datetime takenAt
+        datetime createdAt
     }
 
     ReadingSession {
@@ -97,11 +110,32 @@ Mirrors Clerk user identity. Created on first sign-in or via Clerk webhook.
 | `createdAt` | `DateTime` | Default now | First seen |
 | `updatedAt` | `DateTime` | Auto | Last updated |
 
-**Relations:** `readingSessions`, `quizAttempts`
+**Relations:** `readingSessions`, `quizAttempts`, `baselineAssessment`
 
 ---
 
-### 2.2 ReadingSession
+### 2.2 BaselineAssessment
+
+Permanent baseline scores captured during onboarding (F-017). One record per user; all future progress is measured against this baseline.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | `String` | PK, cuid | Assessment ID |
+| `userId` | `String` | FK → User, Unique | Clerk `userId` |
+| `readingSpeedWPM` | `Int` | Required | Words per minute from timed reading |
+| `comprehensionScore` | `Float` | Required | 0–100 comprehension quiz score |
+| `vocabularyScore` | `Float` | Required | 0–100 vocabulary level score |
+| `inferenceScore` | `Float` | Required | 0–100 inference question score |
+| `overallScore` | `Float` | Required | 0–100 composite baseline score |
+| `takenAt` | `DateTime` | Required | When the assessment was completed |
+| `createdAt` | `DateTime` | Default now | Record created |
+
+**Indexes:**
+- `(userId)` — unique lookup per user
+
+---
+
+### 2.3 ReadingSession
 
 Core entity representing one reading unit.
 
@@ -128,7 +162,7 @@ Core entity representing one reading unit.
 
 ---
 
-### 2.3 Summary
+### 2.4 Summary
 
 AI-generated summary for a session. One active summary per session (regenerate replaces).
 
@@ -147,7 +181,7 @@ AI-generated summary for a session. One active summary per session (regenerate r
 
 ---
 
-### 2.4 Quiz
+### 2.5 Quiz
 
 A generated quiz attached to a session. Multiple quizzes per session allowed (regeneration).
 
@@ -163,7 +197,7 @@ A generated quiz attached to a session. Multiple quizzes per session allowed (re
 
 ---
 
-### 2.5 Question
+### 2.6 Question
 
 Individual multiple-choice question within a quiz.
 
@@ -181,7 +215,7 @@ Individual multiple-choice question within a quiz.
 
 ---
 
-### 2.6 QuizAttempt
+### 2.7 QuizAttempt
 
 Records one user submission for a quiz.
 
@@ -229,13 +263,28 @@ enum SummaryDepth {
 }
 
 model User {
-  id              String           @id
-  email           String?          @unique
-  name            String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  readingSessions ReadingSession[]
-  quizAttempts    QuizAttempt[]
+  id                 String              @id
+  email              String?             @unique
+  name               String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  readingSessions    ReadingSession[]
+  quizAttempts       QuizAttempt[]
+  baselineAssessment BaselineAssessment?
+}
+
+model BaselineAssessment {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  readingSpeedWPM    Int
+  comprehensionScore Float
+  vocabularyScore    Float
+  inferenceScore     Float
+  overallScore       Float
+  takenAt            DateTime
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ReadingSession {
@@ -393,6 +442,7 @@ prisma.quizAttempt.aggregate({
 
 | Feature | Proposed Model |
 |---------|----------------|
+| Baseline assessment | `BaselineAssessment` — planned Phase 2 (F-017) |
 | Reading streaks | `Streak` or computed from `QuizAttempt.createdAt` |
 | Tags / folders | `Tag`, `SessionTag` join table |
 | Spaced repetition | `ReviewSchedule` linked to `Question` |

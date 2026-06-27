@@ -13,13 +13,21 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 |----|---------|-------|--------|
 | F-001 | Authentication | 0 | ✅ Shipped |
 | F-002 | Route Protection | 0 | ✅ Shipped |
-| F-003 | Reading Sessions | 1 | 🔲 Planned |
-| F-004 | AI Summaries | 2 | 🔲 Planned |
+| F-003 | Reading Sessions | 2 | 🔲 Planned |
+| F-004 | AI Summaries | 3 | 🔲 Planned |
 | F-005 | Comprehension Quizzes | 3 | 🔲 Planned |
-| F-006 | Dashboard & Progress | 4 | 🔲 Planned |
-| F-007 | Onboarding | 5 | 🔲 Planned |
+| F-006 | Dashboard & Progress | 2 / 4 | 🔲 Planned |
+| F-007 | Onboarding Tour | 5 | 🔲 Planned |
 | F-008 | File Upload | Post-MVP | 🔲 Planned |
 | F-009 | URL Import | Post-MVP | 🔲 Planned |
+| F-010 | Voice Reader (ElevenLabs) | 3 | 🔲 Planned |
+| F-011 | Multilingual Reading & TTS | 3 | 🔲 Planned |
+| F-012 | Voice Summarization | 3 | 🔲 Planned |
+| F-013 | Visual Learning Games | 4 | 🔲 Planned |
+| F-014 | Memory Games | 4 | 🔲 Planned |
+| F-015 | Listening Games (Song Lyrics) | 4 | 🔲 Planned |
+| F-016 | Community Platform | 4 | 🔲 Planned |
+| F-017 | Onboarding Baseline Assessment | 2 | 🔲 Planned |
 
 **Legend:** ✅ Shipped · 🚧 In Progress · 🔲 Planned
 
@@ -330,9 +338,229 @@ Paste a URL to fetch and extract article text for a new reading session.
 
 ### Constraints
 
-- HTTPS URLs only
+- [ ] HTTPS URLs only
 - Timeout: 10 seconds
 - Fallback message if extraction fails
+
+---
+
+## F-010: Voice Reader (ElevenLabs)
+
+**Phase:** 3 · **Status:** 🔲 Planned
+
+### Description
+
+Text-to-speech reader with celebrity-style voices powered by the ElevenLabs API. Users listen to session text read aloud with selectable voice profiles.
+
+### User Flow
+
+1. User opens a reading session
+2. Selects a voice from available ElevenLabs voice profiles
+3. Clicks play → audio streams or downloads for the current chunk or full text
+4. Playback controls: play, pause, speed adjustment
+
+### Technical Details
+
+- ElevenLabs API integration (server-side only)
+- Voice list cached; audio generated on demand per chunk
+- `ELEVENLABS_API_KEY` env var required
+
+### Acceptance Criteria
+
+- [ ] At least 3 voice options available
+- [ ] Audio plays for session text without errors
+- [ ] Playback speed adjustable (0.75× – 2×)
+- [ ] API key never exposed to client
+
+---
+
+## F-011: Multilingual Reading & Text-to-Speech
+
+**Phase:** 3 · **Status:** 🔲 Planned
+
+### Description
+
+Users read and listen to text in multiple languages. Combines translation support with multilingual TTS for language learners.
+
+### User Flow
+
+1. User selects target language for a session
+2. Text displayed with optional side-by-side translation
+3. TTS reads aloud in the selected language
+4. Vocabulary mapper highlights words with translations
+
+### Acceptance Criteria
+
+- [ ] Support for at least 5 languages at launch
+- [ ] TTS available in each supported language
+- [ ] Language preference saved per user
+
+---
+
+## F-012: Voice Summarization
+
+**Phase:** 3 · **Status:** 🔲 Planned
+
+### Description
+
+Users record their own spoken summary of a reading session. AI evaluates the recording for comprehension accuracy against the source text.
+
+### User Flow
+
+1. User finishes reading a session or chunk
+2. Clicks "Record Summary" → browser captures audio
+3. Speech-to-text transcription runs server-side
+4. Claude compares transcription to source text and scores comprehension
+5. Results shown with feedback on missed key points
+
+### Acceptance Criteria
+
+- [ ] Audio recording works in browser (Web Audio API)
+- [ ] Transcription generated server-side
+- [ ] Comprehension score returned with specific feedback
+- [ ] Recording stored optionally for progress history
+
+---
+
+## F-013: Visual Learning Games
+
+**Phase:** 4 · **Status:** 🔲 Planned
+
+### Description
+
+Interactive visual comprehension exercises tied to session content — matching, sequencing, and diagram-labeling games generated from reading material.
+
+### Acceptance Criteria
+
+- [ ] At least 2 game types available per session
+- [ ] Games generated from session text via Claude
+- [ ] Scores tracked and compared to baseline
+
+---
+
+## F-014: Memory Games
+
+**Phase:** 4 · **Status:** 🔲 Planned
+
+### Description
+
+Retention-focused recall games using content from the user's reading sessions. Spaced repetition mechanics reinforce key concepts over time.
+
+### Acceptance Criteria
+
+- [ ] Flashcard-style recall game from session vocabulary
+- [ ] Spaced repetition schedule based on performance
+- [ ] Progress visible on dashboard
+
+---
+
+## F-015: Listening Games (Song Lyrics)
+
+**Phase:** 4 · **Status:** 🔲 Planned
+
+### Description
+
+AI breaks down song lyrics into comprehension exercises. Users listen to audio, fill in blanks, and answer questions about meaning and vocabulary.
+
+### User Flow
+
+1. User selects or pastes song lyrics
+2. AI segments lyrics into chunks with vocabulary annotations
+3. Listening exercise: fill-in-the-blank or comprehension questions
+4. Score recorded and compared to baseline
+
+### Acceptance Criteria
+
+- [ ] Lyrics broken into annotated chunks by Claude
+- [ ] Audio sync with lyric highlighting
+- [ ] Comprehension questions generated per segment
+
+---
+
+## F-016: Community Platform
+
+**Phase:** 4 · **Status:** 🔲 Planned
+
+### Description
+
+Reddit-style community platform where users share reading recommendations, discuss sessions, post comprehension tips, and upvote helpful content.
+
+### Core Features
+
+- User posts and threaded comments
+- Upvote / downvote on posts and comments
+- Reading recommendation lists
+- Moderation tools (report, hide)
+
+### Acceptance Criteria
+
+- [ ] Users can create posts and comment
+- [ ] Voting updates scores in real time
+- [ ] Content moderated; auth required for all actions
+
+---
+
+## F-017: Onboarding Baseline Assessment
+
+**Phase:** 2 · **Status:** 🔲 Planned
+
+### Description
+
+Every new user takes a 5-minute baseline assessment on first signup before accessing the chunk reader. Establishes a permanent benchmark for measuring all future progress.
+
+> **Build order:** This feature ships **first** in Phase 2, before the core reader UI and chunk reader.
+
+### Assessment Components
+
+| Test | Measures | Duration |
+|------|----------|----------|
+| Timed reading passage | Reading speed (WPM) | ~2 min |
+| Comprehension quiz | Understanding of passage | ~1 min |
+| Vocabulary questions | Word knowledge level | ~1 min |
+| Inference questions | Reading between the lines | ~1 min |
+
+### User Flow
+
+1. User completes Clerk sign-up
+2. Redirected to `/onboarding/assessment` (cannot skip on first login)
+3. Completes four test sections in sequence (~5 minutes total)
+4. Scores calculated and saved to `BaselineAssessment` table
+5. Results screen shows baseline profile
+6. Redirected to dashboard / chunk reader
+
+### Scoring
+
+| Field | Range | Source |
+|-------|-------|--------|
+| `readingSpeedWPM` | Integer | Timed passage word count ÷ time |
+| `comprehensionScore` | 0–100 | Comprehension quiz percentage |
+| `vocabularyScore` | 0–100 | Vocabulary questions percentage |
+| `inferenceScore` | 0–100 | Inference questions percentage |
+| `overallScore` | 0–100 | Weighted composite of above |
+
+Stored permanently in `BaselineAssessment` — one record per user, never overwritten.
+
+### Progress Tracking
+
+- All future reading sessions measured against baseline scores
+- Dashboard shows delta vs. baseline (e.g. "+12 WPM", "+8 comprehension")
+- Monthly progress report emails or in-app notification showing growth since baseline
+
+### Technical Details
+
+- Route: `app/onboarding/assessment/page.tsx`
+- Server Action: `submitBaselineAssessment(scores)`
+- Prisma model: `BaselineAssessment` (see `docs/SCHEMA.md`)
+- Clerk `publicMetadata.onboardingComplete` flag set after submission
+
+### Acceptance Criteria
+
+- [ ] Assessment shown automatically on first login
+- [ ] Cannot access reader until assessment complete
+- [ ] All four score dimensions saved to `BaselineAssessment`
+- [ ] Baseline displayed on dashboard
+- [ ] Future session scores compared to baseline
+- [ ] Monthly progress report shows growth vs. baseline
 
 ---
 
