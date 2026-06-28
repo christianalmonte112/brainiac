@@ -22,33 +22,102 @@ enum SummaryDepth {
 }
 
 model User {
-  id              String           @id
-  email           String?          @unique
-  name            String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  readingSessions ReadingSession[]
-  quizAttempts    QuizAttempt[]
+  id                 String              @id
+  email              String?             @unique
+  name               String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  readingSessions    ReadingSession[]
+  quizAttempts       QuizAttempt[]
+  baselineAssessment BaselineAssessment?
+  vocabularyWords    VocabularyWord[]
+}
+
+/// Permanent baseline scores captured during onboarding (F-017).
+/// One record per user; all future progress is measured against this baseline.
+/// Never overwritten — there is intentionally no update path.
+model BaselineAssessment {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  readingSpeedWPM    Int
+  comprehensionScore Float
+  vocabularyScore    Float
+  inferenceScore     Float
+  overallScore       Float
+  takenAt            DateTime
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ReadingSession {
-  id          String        @id @default(cuid())
-  userId      String
-  title       String
-  sourceText  String        @db.Text
-  wordCount   Int?
-  sourceUrl   String?
-  status      SessionStatus @default(DRAFT)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  completedAt DateTime?
+  id                String        @id @default(cuid())
+  userId            String
+  title             String
+  sourceText        String        @db.Text
+  wordCount         Int?
+  sourceUrl         String?
+  status            SessionStatus @default(DRAFT)
+  /// Index of the next unread chunk (F-002). Chunks are derived from
+  /// sourceText at render time, not persisted — this is the only progress
+  /// marker we need to resume a session.
+  currentChunkIndex Int           @default(0)
+  /// Total active reading time across all chunks, in seconds (F-005). Accrued
+  /// incrementally by submitChunkSummary from client-reported per-chunk
+  /// durations — clamped server-side, not a precise instrument.
+  elapsedSeconds    Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  completedAt       DateTime?
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  summary  Summary?
-  quizzes  Quiz[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary         Summary?
+  quizzes         Quiz[]
+  chunkSummaries  ChunkSummary[]
+  vocabularyWords VocabularyWord[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, status])
+}
+
+/// A word a reader looked up while reading (F-004). One row per distinct
+/// word per user — looking the same word up again from another session just
+/// reuses this row instead of re-querying the dictionary API.
+model VocabularyWord {
+  id              String   @id @default(cuid())
+  userId          String
+  word            String
+  partOfSpeech    String?
+  phonetic        String?
+  definition      String   @db.Text
+  etymology       String?  @db.Text
+  synonyms        String[]
+  sourceSessionId String?
+  createdAt       DateTime @default(now())
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceSession ReadingSession? @relation(fields: [sourceSessionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, word])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+/// A user's micro-summary or chosen keywords for one chunk of a reading
+/// session (F-003). Exactly one of summaryText/keywords is set, enforced in
+/// the submitChunkSummary server action rather than the DB. Writing this row
+/// is what's allowed to advance ReadingSession.currentChunkIndex — there is
+/// intentionally no other path to unlock the next chunk.
+model ChunkSummary {
+  id          String   @id @default(cuid())
+  sessionId   String
+  chunkIndex  Int
+  summaryText String?  @db.Text
+  keywords    String[]
+  createdAt   DateTime @default(now())
+
+  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, chunkIndex])
 }
 
 model Summary {
@@ -79,10 +148,10 @@ model Quiz {
 }
 
 model Question {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   quizId       String
   orderIndex   Int
-  prompt       String @db.Text
+  prompt       String  @db.Text
   options      Json
   correctIndex Int
   explanation  String? @db.Text
