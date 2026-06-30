@@ -1,6 +1,12 @@
 # Brainiac
 
-**Brainiac** is an AI-powered reading comprehension app that helps learners read smarter, retain more, and understand deeply. Upload or paste text, get AI-generated summaries and quizzes, track progress over time, and build lasting reading habits.
+**Brainiac** is an AI-powered reading comprehension app that helps adults read smarter, retain more, and understand deeply. Upload or paste text, get AI-generated summaries and quizzes, track progress over time, and build lasting reading habits.
+
+### Target Audience
+
+Brainiac targets **adults who want measurable cognitive growth** — professionals, students, lifelong learners, and test preppers. It is **not** a children's literacy app.
+
+What sets Brainiac apart from competitors like Readability and Mindgrasp is the combination of **baseline IQ-style assessment**, a **Socratic AI tutor**, and **gamified community features** — all aimed at adult cognitive enhancement, not study cramming or early childhood literacy.
 
 ---
 

@@ -50,16 +50,28 @@ Existing tools offer highlights or passive summaries but rarely close the loop w
 
 ## 4. Target Users
 
+Brainiac targets **adults who want measurable cognitive growth** — professionals, students, lifelong learners, and test preppers. It is **not** a children's literacy app.
+
+### Differentiation
+
+Compared to competitors such as **Readability** (early childhood literacy) and **Mindgrasp** (study cramming), Brainiac combines:
+
+- **Baseline IQ-style assessment** — permanent benchmark scores (reading speed, comprehension, vocabulary, inference) measured on day one
+- **Socratic AI tutor** — guided comprehension through chunk reading, micro-summaries, and AI feedback (Phase 3+)
+- **Gamified community features** — progress tracking, games, and a Reddit-style platform for adult learners (Phase 4+)
+
+The product is designed for **adult cognitive enhancement**, not passive summarization, study cramming, or early childhood literacy.
+
 ### Primary Personas
 
-**Alex — College Student**  
-Reads 3–5 academic articles per week. Needs quick summaries and self-testing before exams. Mobile-friendly, short sessions.
+**Alex — College Student & Test Prepper**  
+Reads 3–5 academic articles per week. Needs measurable improvement in comprehension and reading speed before exams (GRE, LSAT, MCAT). Values baseline scores and progress dashboards.
 
 **Jordan — Knowledge Worker**  
-Reads industry reports and long-form content. Wants to extract actionable insights and verify understanding without re-reading.
+Reads industry reports and long-form content. Wants to extract actionable insights, verify understanding, and track cognitive growth over time — not just summarize and forget.
 
 **Sam — Lifelong Learner**  
-Reads books and essays for personal growth. Values streaks, history, and seeing improvement over time.
+Reads books and essays for personal growth. Values streaks, community discussion, and seeing quantified improvement against a permanent baseline.
 
 ---
 

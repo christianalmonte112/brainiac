@@ -28,6 +28,7 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-015 | Listening Games (Song Lyrics) | 4 | 🔲 Planned |
 | F-016 | Community Platform | 4 | 🔲 Planned |
 | F-017 | Onboarding Baseline Assessment | 2 | 🔲 Planned |
+| F-018 | Image/Photo Upload (Claude Vision) | 3 | 🔲 Planned |
 
 **Legend:** ✅ Shipped · 🚧 In Progress · 🔲 Planned
 
@@ -561,6 +562,42 @@ Stored permanently in `BaselineAssessment` — one record per user, never overwr
 - [ ] Baseline displayed on dashboard
 - [ ] Future session scores compared to baseline
 - [ ] Monthly progress report shows growth vs. baseline
+
+---
+
+## F-018: Image/Photo Upload
+
+**Phase:** 3 · **Status:** 🔲 Planned
+
+### Description
+
+Users upload a photo of a book page, printed article, or other readable image. The Claude Vision API extracts the text, which then flows into the standard chunk reader — same progressive unlock, micro-summaries, and vocabulary tools as pasted text.
+
+Works for textbooks, articles, handwritten notes, and any readable image where OCR-quality extraction is feasible.
+
+### User Flow
+
+1. User clicks "New document" and selects **Upload photo**
+2. Chooses an image from device (JPEG, PNG, WebP; max size TBD)
+3. Server sends image to Claude Vision API for text extraction
+4. Extracted text previewed for user confirmation/editing
+5. User saves → session created → standard chunk reader flow begins
+
+### Technical Details
+
+- Server Action or Route Handler using Anthropic Claude Vision (same API key as F-004/F-005)
+- Model: Claude with vision support (e.g. `claude-sonnet-4-20250514`)
+- Extracted text stored in `ReadingSession.sourceText` like any other session
+- Image not persisted after extraction (optional future: Supabase Storage)
+- Handwriting quality varies — show confidence warning when extraction is partial
+
+### Acceptance Criteria
+
+- [ ] Upload JPEG/PNG image and receive extracted text
+- [ ] Extracted text editable before session save
+- [ ] Session flows into chunk reader identically to pasted text
+- [ ] Claude API key never exposed to client
+- [ ] Graceful error when image is unreadable or too blurry
 
 ---
 
