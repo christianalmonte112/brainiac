@@ -16,13 +16,38 @@ interface ChunkBodyProps {
   persist?: boolean;
 }
 
+interface ScoringResult {
+  aiScore: number;
+  aiFeedback: string;
+  completed: boolean;
+}
+
+function ScoreBar({ score }: { score: number }) {
+  const color =
+    score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-400" : "bg-rose-400";
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${color}`}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+      <span className="w-12 text-right text-sm font-semibold text-slate-900">{score}/100</span>
+    </div>
+  );
+}
+
 /**
- * One chunk's text plus its micro-summary gate (F-003): the passage dims
- * once the reader says they're done, and the next chunk stays locked until
- * they submit a one-sentence summary or pick exactly 3 keywords. Render this
- * keyed by chunkIndex from the parent so all local state — stage, mode,
- * drafts — resets naturally on a fresh mount instead of an effect-driven
- * reset.
+ * One chunk's text plus its micro-summary gate (F-003) with AI scoring (Phase 3).
+ *
+ * After the user submits a written summary, Claude scores it 0–100 and returns
+ * 1–2 sentences of feedback. The score card is shown in place of the form;
+ * the user then clicks "Continue" to advance. Keywords mode skips scoring
+ * and advances immediately as before.
+ *
+ * Render this keyed by chunkIndex from the parent so all local state —
+ * stage, mode, drafts, scoring result — resets naturally on a fresh mount.
  */
 export function ChunkBody({
   sessionId,
@@ -33,12 +58,13 @@ export function ChunkBody({
   onWordClick,
   persist = true,
 }: ChunkBodyProps) {
-  const [stage, setStage] = useState<"reading" | "summarizing">("reading");
+  const [stage, setStage] = useState<"reading" | "summarizing" | "scored">("reading");
   const [mode, setMode] = useState<"summary" | "keywords">("summary");
   const [summaryText, setSummaryText] = useState("");
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [scoringResult, setScoringResult] = useState<ScoringResult | null>(null);
   const mountedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -70,6 +96,7 @@ export function ChunkBody({
       try {
         const chunkSeconds =
           mountedAtRef.current !== null ? Math.round((Date.now() - mountedAtRef.current) / 1000) : 0;
+
         const result = await submitChunkSummary({
           sessionId,
           chunkIndex,
@@ -78,8 +105,22 @@ export function ChunkBody({
           summaryText: mode === "summary" ? summaryText.trim() : undefined,
           keywords: mode === "keywords" ? selectedKeywords : undefined,
           chunkSeconds,
+          chunkText,
         });
-        onSubmitted(result.completed);
+
+        // Keywords mode: no score, advance immediately.
+        if (mode === "keywords" || result.aiScore === undefined) {
+          onSubmitted(result.completed);
+          return;
+        }
+
+        // Summary mode: show the score card before advancing.
+        setScoringResult({
+          aiScore: result.aiScore,
+          aiFeedback: result.aiFeedback ?? "",
+          completed: result.completed,
+        });
+        setStage("scored");
       } catch {
         setError("Couldn't save your summary. Please try again.");
       }
@@ -88,9 +129,10 @@ export function ChunkBody({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Passage — dims once the reader moves to summarizing/scored */}
       <div
         className={`flex flex-col gap-4 text-base leading-relaxed text-slate-800 transition-opacity duration-300 ${
-          stage === "summarizing" ? "opacity-40" : ""
+          stage !== "reading" ? "opacity-40" : ""
         }`}
       >
         {chunkText.split("\n\n").map((paragraph, index) => (
@@ -98,6 +140,7 @@ export function ChunkBody({
         ))}
       </div>
 
+      {/* Stage: reading */}
       {stage === "reading" && (
         <button
           onClick={() => setStage("summarizing")}
@@ -107,6 +150,7 @@ export function ChunkBody({
         </button>
       )}
 
+      {/* Stage: summarizing */}
       {stage === "summarizing" && (
         <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
           <div className="flex gap-2 text-sm">
@@ -168,7 +212,36 @@ export function ChunkBody({
             disabled={!canSubmit || isPending}
             className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isPending ? "Saving..." : isLastChunk ? "Finish" : "Submit & continue"}
+            {isPending
+              ? mode === "summary"
+                ? "Scoring…"
+                : "Saving…"
+              : isLastChunk
+                ? "Finish"
+                : "Submit & continue"}
+          </button>
+        </div>
+      )}
+
+      {/* Stage: scored — show AI feedback before advancing */}
+      {stage === "scored" && scoringResult && (
+        <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Summary score</p>
+            <div className="mt-2">
+              <ScoreBar score={scoringResult.aiScore} />
+            </div>
+          </div>
+
+          {scoringResult.aiFeedback && (
+            <p className="text-sm leading-relaxed text-slate-700">{scoringResult.aiFeedback}</p>
+          )}
+
+          <button
+            onClick={() => onSubmitted(scoringResult.completed)}
+            className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
+          >
+            {scoringResult.completed ? "Finish" : "Continue reading"}
           </button>
         </div>
       )}

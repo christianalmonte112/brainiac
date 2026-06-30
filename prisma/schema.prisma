@@ -111,12 +111,25 @@ model VocabularyWord {
 /// the submitChunkSummary server action rather than the DB. Writing this row
 /// is what's allowed to advance ReadingSession.currentChunkIndex — there is
 /// intentionally no other path to unlock the next chunk.
+/// A user's micro-summary or chosen keywords for one chunk of a reading
+/// session (F-003). Exactly one of summaryText/keywords is set, enforced in
+/// the submitChunkSummary server action rather than the DB. Writing this row
+/// is what's allowed to advance ReadingSession.currentChunkIndex — there is
+/// intentionally no other path to unlock the next chunk.
+/// aiScore and aiFeedback are populated asynchronously by Claude after the
+/// row is written; they are nullable so the row can be created and the user
+/// can advance before scoring completes.
 model ChunkSummary {
   id          String   @id @default(cuid())
   sessionId   String
   chunkIndex  Int
   summaryText String?  @db.Text
   keywords    String[]
+  /// Claude score 0-100. Null until scored; keywords-mode rows are also scored
+  /// based on relevance so this field is populated for both modes.
+  aiScore     Int?
+  /// 1-2 sentence encouraging feedback from Claude. Null until scored.
+  aiFeedback  String?  @db.Text
   createdAt   DateTime @default(now())
 
   session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)

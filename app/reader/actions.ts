@@ -6,6 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { countWords } from "@/lib/text/word-count";
 import { createReadingSessionSchema, submitChunkSummarySchema } from "@/lib/reading-sessions/schema";
+import { scoreChunkSummary } from "@/lib/prompts/scoreSummary";
 
 export interface CreateSessionActionState {
   error?: string;
@@ -62,6 +63,10 @@ export async function deleteReadingSession(formData: FormData): Promise<void> {
 
 export interface SubmitChunkSummaryResult {
   completed: boolean;
+  /** Claude score 0–100. Only present when mode is "summary" and scoring succeeded. */
+  aiScore?: number;
+  /** 1–2 sentence feedback from Claude. Present alongside aiScore. */
+  aiFeedback?: string;
 }
 
 export interface SubmitChunkSummaryArgs {
@@ -72,6 +77,8 @@ export interface SubmitChunkSummaryArgs {
   summaryText?: string;
   keywords?: string[];
   chunkSeconds?: number;
+  /** Original chunk text — passed to Claude for summary scoring. Not persisted. */
+  chunkText?: string;
 }
 
 /**
@@ -98,6 +105,7 @@ export async function submitChunkSummary(args: SubmitChunkSummaryArgs): Promise<
     throw new Error("Reading session not found.");
   }
 
+  // Persist the summary and advance session progress atomically.
   await prisma.$transaction([
     prisma.chunkSummary.upsert({
       where: { sessionId_chunkIndex: { sessionId: parsed.sessionId, chunkIndex: parsed.chunkIndex } },
@@ -110,6 +118,8 @@ export async function submitChunkSummary(args: SubmitChunkSummaryArgs): Promise<
       update: {
         summaryText: parsed.mode === "summary" ? parsed.summaryText : null,
         keywords: parsed.mode === "keywords" ? (parsed.keywords ?? []) : [],
+        aiScore: null,
+        aiFeedback: null,
       },
     }),
     prisma.readingSession.update({
@@ -121,6 +131,32 @@ export async function submitChunkSummary(args: SubmitChunkSummaryArgs): Promise<
       },
     }),
   ]);
+
+  // Score summary-mode submissions with Claude. This runs after the DB write
+  // so a Claude timeout never blocks progress. Keywords mode doesn't get
+  // sentence scoring — we return without a score for that path.
+  if (parsed.mode === "summary" && parsed.summaryText) {
+    const chunkSummaryRecord = await prisma.chunkSummary.findUnique({
+      where: { sessionId_chunkIndex: { sessionId: parsed.sessionId, chunkIndex: parsed.chunkIndex } },
+      select: { id: true },
+    });
+
+    try {
+      const { score, feedback } = await scoreChunkSummary(args.chunkText ?? "", parsed.summaryText);
+
+      if (chunkSummaryRecord) {
+        await prisma.chunkSummary.update({
+          where: { id: chunkSummaryRecord.id },
+          data: { aiScore: score, aiFeedback: feedback },
+        });
+      }
+
+      revalidatePath(`/reader/${parsed.sessionId}`);
+      return { completed, aiScore: score, aiFeedback: feedback };
+    } catch {
+      // Scoring failure is non-fatal — user still advances.
+    }
+  }
 
   revalidatePath(`/reader/${parsed.sessionId}`);
   return { completed };

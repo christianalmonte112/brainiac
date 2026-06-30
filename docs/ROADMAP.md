@@ -1,6 +1,6 @@
 # Roadmap — Brainiac
 
-**Last updated:** June 2025
+**Last updated:** June 2026
 
 This roadmap outlines the development phases for Brainiac from MVP through post-launch enhancements. Timelines are estimates and may shift based on feedback and priorities.
 
@@ -47,43 +47,44 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 ---
 
-## Phase 2 — Onboarding & Core Reader
+## Phase 2 — Onboarding & Core Reader ✅
 
-**Status:** In Progress  
-**Target:** Week 2–3
+**Status:** Complete  
+**Completed:** June 2026
 
 > **Build order:** Onboarding baseline assessment comes **first**, before the chunk reader.
 
 | Item | Priority | Feature | Description |
 |------|----------|---------|-------------|
-| Onboarding baseline assessment | P0 | F-017 | 5-minute test: reading speed, comprehension, vocabulary, inference |
-| Core reader UI and layout | P0 | — | Reader shell, navigation, session layout |
-| Chunk reader with progressive unlock | P0 | — | Text delivered in chunks; next chunk unlocks after comprehension check |
-| Micro-summarization | P1 | — | Short AI summaries per chunk |
-| Vocabulary mapper | P1 | — | Highlight and define unfamiliar words inline |
-| Progress dashboard | P1 | F-006 | Session history, stats vs. baseline |
-| Anthropic SDK integration | P0 | — | `npm install @anthropic-ai/sdk`; server-side Claude client |
+| Onboarding baseline assessment | P0 | F-017 | 5-minute test: reading speed, comprehension, vocabulary, inference | ✅ |
+| Core reader UI and layout | P0 | — | Reader shell, navigation, session layout | ✅ |
+| Chunk reader with progressive unlock | P0 | — | Text delivered in chunks; next chunk unlocks after comprehension check | ✅ |
+| Micro-summarization | P1 | — | Short AI summaries per chunk | ✅ |
+| Vocabulary mapper | P1 | — | Highlight and define unfamiliar words inline | ✅ |
+| Progress dashboard | P1 | F-006 | Session history, stats vs. baseline | ✅ |
+| Anthropic SDK integration | P0 | — | `@anthropic-ai/sdk` installed; server-side Claude client | ✅ |
 
-**Exit criteria:** New users complete baseline assessment; can read text in progressive chunks; dashboard shows progress vs. baseline.
+**Exit criteria:** New users complete baseline assessment; can read text in progressive chunks; dashboard shows progress vs. baseline. ✅
 
 ---
 
-## Phase 3 — Voice & Multilingual
+## Phase 3 — AI & Voice
 
-**Status:** Planned  
-**Target:** Week 4–5
+**Status:** In Progress  
+**Started:** June 2026
 
-| Item | Priority | Feature | Description |
-|------|----------|---------|-------------|
-| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate |
-| Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader |
-| Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API |
-| Multilingual support — language selection, translated assessment & UI, multilingual TTS | P1 | F-011 | Language picker before onboarding; saves to User.preferredLanguage; drives assessment translation, UI locale, TTS voice |
-| Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension |
-| AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth |
-| Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring |
+| Item | Priority | Feature | Description | Status |
+|------|----------|---------|-------------|--------|
+| AI summary scoring | P0 | F-003 | Claude scores each chunk micro-summary 0–100 with encouraging feedback | 🚧 In Progress |
+| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | 🔲 Planned |
+| AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth | 🔲 Planned |
+| Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring | 🔲 Planned |
+| Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader | 🔲 Planned |
+| Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API | 🔲 Planned |
+| Multilingual support — language selection, translated assessment & UI, multilingual TTS | P1 | F-011 | Language picker before onboarding; saves to User.preferredLanguage; drives assessment translation, UI locale, TTS voice | 🔲 Planned |
+| Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension | 🔲 Planned |
 
-**Exit criteria:** Admin dashboard live and showing real engagement data; users can upload photos for text extraction; listen in multiple languages; record voice summaries; generate AI summaries and quizzes.
+**Exit criteria:** AI summary scoring live; admin dashboard showing real engagement data; AI summaries and quizzes available; users can upload photos, listen in multiple languages, and record voice summaries.
 
 ---
 
@@ -162,14 +163,15 @@ Prioritized ideas for after beta launch. Not committed to dates.
 
 ## Technical Debt Tracker
 
-| Item | Phase to Address |
-|------|------------------|
-| Rename package from `readwise-app` to `brainiac` | Phase 2 |
-| Add Zod validation for all Server Actions | Phase 2 |
-| Prisma client singleton for serverless | Phase 2 |
-| `BaselineAssessment` migration | Phase 2 |
-| E2E tests with Playwright + Clerk testing | Phase 5 |
-| CI pipeline (lint, typecheck, migrate) | Phase 5 |
+| Item | Phase to Address | Status |
+|------|------------------|--------|
+| Rename package from `readwise-app` to `brainiac` | Phase 2 | 🔲 Pending |
+| Add Zod validation for all Server Actions | Phase 2 | ✅ Done |
+| Prisma client singleton for serverless | Phase 2 | ✅ Done |
+| `BaselineAssessment` migration | Phase 2 | ✅ Done |
+| Remove temporary `as any` cast in `actions.ts` after AI scoring migration | Phase 3 | ✅ Done |
+| E2E tests with Playwright + Clerk testing | Phase 5 | 🔲 Pending |
+| CI pipeline (lint, typecheck, migrate) | Phase 5 | 🔲 Pending |
 
 ---
 
