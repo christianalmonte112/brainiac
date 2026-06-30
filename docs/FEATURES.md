@@ -21,7 +21,7 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-008 | File Upload | Post-MVP | 🔲 Planned |
 | F-009 | URL Import | Post-MVP | 🔲 Planned |
 | F-010 | Voice Reader (ElevenLabs) | 3 | 🔲 Planned |
-| F-011 | Multilingual Reading & TTS | 3 | 🔲 Planned |
+| F-011 | Multilingual Support (language selection + translated UI/assessment/TTS) | 3 | 🔲 Planned |
 | F-012 | Voice Summarization | 3 | 🔲 Planned |
 | F-013 | Visual Learning Games | 4 | 🔲 Planned |
 | F-014 | Memory Games | 4 | 🔲 Planned |
@@ -376,26 +376,56 @@ Text-to-speech reader with celebrity-style voices powered by the ElevenLabs API.
 
 ---
 
-## F-011: Multilingual Reading & Text-to-Speech
+## F-011: Multilingual Support
 
 **Phase:** 3 · **Status:** 🔲 Planned
 
 ### Description
 
-Users read and listen to text in multiple languages. Combines translation support with multilingual TTS for language learners.
+Full multilingual support from the very first screen. A language selection step is shown **before** the F-017 baseline assessment, making language the first choice a new user makes. The selected language is saved permanently to `User.preferredLanguage` and drives the assessment, all interface text, TTS voice, and optional document translation.
+
+### Supported Languages at Launch
+
+Spanish, French, Portuguese, Mandarin, Arabic, Hindi, and English. Additional languages added based on demand.
 
 ### User Flow
 
-1. User selects target language for a session
-2. Text displayed with optional side-by-side translation
-3. TTS reads aloud in the selected language
-4. Vocabulary mapper highlights words with translations
+1. New user completes Clerk sign-up
+2. **Language selection screen** — "What language would you like to use?" with a dropdown of supported languages
+3. Selection saved to `User.preferredLanguage` (BCP-47 tag, e.g. `"es"`, `"fr"`)
+4. Assessment passage and all 12 questions translated into selected language via Claude API before rendering
+5. All app UI text (navigation, buttons, labels, prompts) rendered in selected language throughout the session
+6. Voice reader (F-010 TTS) defaults to the user's selected language automatically
+7. When uploading a document or photo, user can optionally have content translated into their preferred language before it enters the chunk reader
+
+### Changing Language
+
+- Available from account settings at any time
+- Changing language does **not** re-run the baseline assessment; it only updates UI and future TTS/translation defaults
+
+### Schema Change
+
+`User.preferredLanguage String @default("en")` — BCP-47 tag. Set on language selection screen, updated via account settings.
+
+### Technical Details
+
+- Language selection screen: `app/onboarding/language/page.tsx`
+- Server Action: `setPreferredLanguage(lang: string)` — validates against allowed list, writes to `User.preferredLanguage`
+- Assessment translation: Server Action calls Claude with the selected language before rendering `AssessmentFlow`
+- UI localisation: initially a simple string map per supported language; swap for `next-intl` if scope grows
+- TTS language passed directly to ElevenLabs voice selection (F-010)
+- Document translation: optional step in `createReadingSession` or `submitImageUpload` (F-018)
 
 ### Acceptance Criteria
 
-- [ ] Support for at least 5 languages at launch
-- [ ] TTS available in each supported language
-- [ ] Language preference saved per user
+- [ ] Language selection screen shown before baseline assessment for every new user
+- [ ] At least 7 languages available at launch
+- [ ] `User.preferredLanguage` saved and reflected immediately across the app
+- [ ] Assessment passage and all questions rendered in selected language
+- [ ] UI navigation and button labels rendered in selected language
+- [ ] TTS defaults to selected language
+- [ ] User can change language from account settings without losing any data
+- [ ] Language validation server-side — arbitrary strings rejected
 
 ---
 

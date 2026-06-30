@@ -107,6 +107,7 @@ Mirrors Clerk user identity. Created on first sign-in or via Clerk webhook.
 | `id` | `String` | PK | Clerk `userId` |
 | `email` | `String` | Unique, optional | Primary email from Clerk |
 | `name` | `String` | Optional | Display name |
+| `preferredLanguage` | `String` | Default `"en"` | BCP-47 tag set on language selection screen (F-011) |
 | `createdAt` | `DateTime` | Default now | First seen |
 | `updatedAt` | `DateTime` | Auto | Last updated |
 
@@ -266,6 +267,7 @@ model User {
   id                 String              @id
   email              String?             @unique
   name               String?
+  preferredLanguage  String              @default("en")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   readingSessions    ReadingSession[]

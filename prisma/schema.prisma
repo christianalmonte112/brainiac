@@ -22,15 +22,19 @@ enum SummaryDepth {
 }
 
 model User {
-  id                 String              @id
-  email              String?             @unique
-  name               String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  readingSessions    ReadingSession[]
-  quizAttempts       QuizAttempt[]
+  id                String              @id
+  email             String?             @unique
+  name              String?
+  /// BCP-47 language tag (e.g. "en", "es", "fr"). Set during the language
+  /// selection screen shown before the baseline assessment (F-011). Drives
+  /// assessment translation, UI locale, and default TTS voice.
+  preferredLanguage String              @default("en")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  readingSessions   ReadingSession[]
+  quizAttempts      QuizAttempt[]
   baselineAssessment BaselineAssessment?
-  vocabularyWords    VocabularyWord[]
+  vocabularyWords   VocabularyWord[]
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
