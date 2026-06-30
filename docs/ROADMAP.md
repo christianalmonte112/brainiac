@@ -75,6 +75,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 | Item | Priority | Feature | Description |
 |------|----------|---------|-------------|
+| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate |
 | Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader |
 | Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API |
 | Multilingual reading and text-to-speech | P1 | F-011 | Read and listen in multiple languages |
@@ -82,7 +83,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth |
 | Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring |
 
-**Exit criteria:** Users can upload photos for text extraction; listen in multiple languages; record voice summaries; generate AI summaries and quizzes.
+**Exit criteria:** Admin dashboard live and showing real engagement data; users can upload photos for text extraction; listen in multiple languages; record voice summaries; generate AI summaries and quizzes.
 
 ---
 

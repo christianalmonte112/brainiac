@@ -29,6 +29,7 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-016 | Community Platform | 4 | 🔲 Planned |
 | F-017 | Onboarding Baseline Assessment | 2 | 🔲 Planned |
 | F-018 | Image/Photo Upload (Claude Vision) | 3 | 🔲 Planned |
+| F-019 | Admin Analytics Dashboard | 3 | 🔲 Planned |
 
 **Legend:** ✅ Shipped · 🚧 In Progress · 🔲 Planned
 
@@ -598,6 +599,57 @@ Works for textbooks, articles, handwritten notes, and any readable image where O
 - [ ] Session flows into chunk reader identically to pasted text
 - [ ] Claude API key never exposed to client
 - [ ] Graceful error when image is unreadable or too blurry
+
+---
+
+## F-019: Admin Analytics Dashboard
+
+**Phase:** 3 · **Status:** 🔲 Planned
+
+### Description
+
+A private page at `/admin/stats` visible only to the app owner. Provides real engagement data from existing Prisma tables — no external analytics tools needed — so the owner can make data-driven decisions about readiness for wider user testing rather than guessing.
+
+**Must be built before inviting outside beta testers.**
+
+### Access Control
+
+- Route is gated server-side by checking `auth().userId` against a hardcoded `ADMIN_USER_ID` env var
+- Returns `notFound()` for any other authenticated user
+- Not listed in navigation; not a public route
+
+### Metrics Displayed
+
+| Metric | Source table | Query |
+|--------|-------------|-------|
+| Total signups | `User` | `prisma.user.count()` |
+| Assessment completion rate | `User`, `BaselineAssessment` | `baselineCount / userCount * 100` |
+| Total reading sessions completed | `ReadingSession` | `count where status = COMPLETED` |
+| Active users this week | `ReadingSession` or `QuizAttempt` | distinct `userId` with activity in last 7 days |
+| Average reading streak | `ReadingSession` | median consecutive active days across all users |
+
+### User Flow
+
+1. Owner navigates to `/admin/stats` while signed in
+2. Page verifies `userId === ADMIN_USER_ID`; any mismatch returns 404
+3. Stats rendered as a simple server-side dashboard (no client JS needed)
+4. Owner uses data to decide when to open beta invites
+
+### Technical Details
+
+- Route: `app/admin/stats/page.tsx` — pure Server Component
+- Auth check: `const { userId } = await auth(); if (userId !== process.env.ADMIN_USER_ID) notFound();`
+- All queries use existing Prisma models — no schema changes required
+- `ADMIN_USER_ID` added to `.env.local` and Vercel env vars (not committed)
+- No new dependencies needed
+
+### Acceptance Criteria
+
+- [ ] Route returns 404 for any non-owner user
+- [ ] Route returns 404 for unauthenticated requests
+- [ ] All five metrics visible and accurate against live Supabase data
+- [ ] Page loads in under 3 seconds
+- [ ] `ADMIN_USER_ID` is an env var, never hardcoded in source
 
 ---
 
