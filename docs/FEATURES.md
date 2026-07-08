@@ -1,7 +1,7 @@
 # Features — Brainiac
 
 **Version:** 1.0  
-**Last updated:** June 2025
+**Last updated:** July 2026
 
 Detailed feature specifications for Brainiac. For product context see [PRD.md](./PRD.md); for implementation see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -30,8 +30,20 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-017 | Onboarding Baseline Assessment | 2 | 🔲 Planned |
 | F-018 | Image/Photo Upload (Claude Vision) | 3 | 🔲 Planned |
 | F-019 | Admin Analytics Dashboard | 3 | 🔲 Planned |
+| F-011b | Spanish Language Support Milestone | 3 | 🔲 Planned |
 
 **Legend:** ✅ Shipped · 🚧 In Progress · 🔲 Planned
+
+---
+
+## Phase 3 Remaining Build Order (Authoritative)
+
+1. **F-019 — Admin Analytics Dashboard** (must ship before inviting beta testers)
+2. **F-011 — Voice Reader with ElevenLabs API** (text to speech, multiple voices)
+3. **F-012 — Voice Summarization** (user records spoken summary, Claude transcribes/scores)
+4. **F-018 — Image/Photo Upload (Claude Vision)** (extract text from photos into chunk reader)
+5. **F-004 — AI Full Session Summary** (Claude generates full summary after document completion)
+6. **F-011b — Spanish Language Support** (language selection before onboarding + Spanish translated assessment/content)
 
 ---
 
@@ -426,6 +438,12 @@ Spanish, French, Portuguese, Mandarin, Arabic, Hindi, and English. Additional la
 - [ ] TTS defaults to selected language
 - [ ] User can change language from account settings without losing any data
 - [ ] Language validation server-side — arbitrary strings rejected
+
+### F-011b: Spanish-First Milestone (Phase 3)
+
+- [ ] Spanish is available as a first-class language option before onboarding assessment
+- [ ] Assessment passage/questions and key onboarding UI are available in Spanish
+- [ ] Spanish flow is verified end-to-end before broader multilingual rollout
 
 ---
 
