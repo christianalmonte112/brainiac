@@ -12,6 +12,8 @@ interface ChunkBodyProps {
   totalChunks: number;
   onSubmitted: (completed: boolean) => void;
   onWordClick: (word: string) => void;
+  /** Called when the user selects 3+ words and clicks "Ask Tutor". */
+  onHighlight?: (selectedText: string, paragraphText: string) => void;
   /** False during a post-completion re-read, where progress is already saved and shouldn't be overwritten. */
   persist?: boolean;
 }
@@ -56,6 +58,7 @@ export function ChunkBody({
   totalChunks,
   onSubmitted,
   onWordClick,
+  onHighlight,
   persist = true,
 }: ChunkBodyProps) {
   const [stage, setStage] = useState<"reading" | "summarizing" | "scored">("reading");
@@ -136,7 +139,12 @@ export function ChunkBody({
         }`}
       >
         {chunkText.split("\n\n").map((paragraph, index) => (
-          <ClickableParagraph key={index} text={paragraph} onWordClick={onWordClick} />
+          <ClickableParagraph
+            key={index}
+            text={paragraph}
+            onWordClick={onWordClick}
+            onHighlight={onHighlight}
+          />
         ))}
       </div>
 

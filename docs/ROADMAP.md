@@ -75,8 +75,8 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 | Item | Priority | Feature | Description | Status |
 |------|----------|---------|-------------|--------|
-| AI summary scoring | P0 | F-003 | Claude scores each chunk micro-summary 0–100 with encouraging feedback | 🚧 In Progress |
-| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | 🔲 Planned |
+| AI summary scoring | P0 | F-003 | Claude scores each chunk micro-summary 0–100 with encouraging feedback | ✅ |
+| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | 🚧 Next |
 | AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth | 🔲 Planned |
 | Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring | 🔲 Planned |
 | Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader | 🔲 Planned |
@@ -84,7 +84,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | Multilingual support — language selection, translated assessment & UI, multilingual TTS | P1 | F-011 | Language picker before onboarding; saves to User.preferredLanguage; drives assessment translation, UI locale, TTS voice | 🔲 Planned |
 | Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension | 🔲 Planned |
 
-**Exit criteria:** AI summary scoring live; admin dashboard showing real engagement data; AI summaries and quizzes available; users can upload photos, listen in multiple languages, and record voice summaries.
+**Exit criteria:** AI summary scoring live ✅; admin dashboard showing real engagement data; AI summaries and quizzes available; users can upload photos, listen in multiple languages, and record voice summaries.
 
 ---
 
@@ -130,7 +130,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 Prioritized ideas for after beta launch. Not committed to dates.
 
-### Near-term (Q3 2025)
+### Near-term (Q3 2026)
 
 | Feature | Value | Effort |
 |---------|-------|--------|
@@ -140,7 +140,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 | Dark mode polish | Medium | Low |
 | Email digest (weekly progress) | Medium | Medium |
 
-### Mid-term (Q4 2025)
+### Mid-term (Q4 2026)
 
 | Feature | Value | Effort |
 |---------|-------|--------|

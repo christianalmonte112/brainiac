@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChunkBody } from "./ChunkBody";
 import { ChunkTimer } from "./ChunkTimer";
 import { VocabularyPanel } from "./VocabularyPanel";
+import { HighlightTutor } from "./HighlightTutor";
 
 interface ChunkReaderProps {
   sessionId: string;
@@ -14,8 +15,14 @@ interface ChunkReaderProps {
 
 /**
  * Paragraph-chunked reader: one chunk visible at a time, gated behind a
- * micro-summary (F-003) rather than a plain "next" button. ChunkBody is
- * keyed by chunkIndex so its read/summarize stage resets on every new chunk.
+ * micro-summary (F-003) rather than a plain "next" button.
+ *
+ * Manages two independent slide-in panels:
+ * - VocabularyPanel (z-40) — single-word lookup via the vocabulary mapper
+ * - HighlightTutor (z-50) — multi-word highlight breakdown via Claude
+ *
+ * Both panels have separate open/close state and can coexist; HighlightTutor
+ * sits above VocabularyPanel when both are open.
  */
 export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReaderProps) {
   const router = useRouter();
@@ -24,8 +31,15 @@ export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReade
 
   const [chunkIndex, setChunkIndex] = useState(() => Math.min(initialChunkIndex, totalChunks - 1));
   const [restarted, setRestarted] = useState(false);
+
+  // Vocabulary panel state
   const [activeWord, setActiveWord] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [vocabPanelOpen, setVocabPanelOpen] = useState(false);
+
+  // Highlight tutor state
+  const [highlightText, setHighlightText] = useState<string | null>(null);
+  const [highlightParagraph, setHighlightParagraph] = useState<string | null>(null);
+  const [tutorOpen, setTutorOpen] = useState(false);
 
   if (alreadyCompleted && !restarted) {
     return (
@@ -56,7 +70,13 @@ export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReade
 
   function handleWordClick(word: string) {
     setActiveWord(word);
-    setPanelOpen(true);
+    setVocabPanelOpen(true);
+  }
+
+  function handleHighlight(selectedText: string, paragraphText: string) {
+    setHighlightText(selectedText);
+    setHighlightParagraph(paragraphText);
+    setTutorOpen(true);
   }
 
   return (
@@ -81,14 +101,25 @@ export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReade
         totalChunks={totalChunks}
         onSubmitted={handleSubmitted}
         onWordClick={handleWordClick}
+        onHighlight={handleHighlight}
         persist={!restarted}
       />
 
+      {/* Vocabulary panel — single-word lookup (z-40) */}
       <VocabularyPanel
         word={activeWord}
-        isOpen={panelOpen}
+        isOpen={vocabPanelOpen}
         sessionId={sessionId}
-        onClose={() => setPanelOpen(false)}
+        onClose={() => setVocabPanelOpen(false)}
+      />
+
+      {/* Highlight Tutor — multi-word Claude breakdown (z-50, above vocab panel) */}
+      <HighlightTutor
+        selectedText={highlightText}
+        surroundingParagraph={highlightParagraph}
+        sessionId={sessionId}
+        isOpen={tutorOpen}
+        onClose={() => setTutorOpen(false)}
       />
     </div>
   );

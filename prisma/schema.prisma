@@ -22,19 +22,20 @@ enum SummaryDepth {
 }
 
 model User {
-  id                String              @id
-  email             String?             @unique
-  name              String?
+  id                    String                 @id
+  email                 String?                @unique
+  name                  String?
   /// BCP-47 language tag (e.g. "en", "es", "fr"). Set during the language
   /// selection screen shown before the baseline assessment (F-011). Drives
   /// assessment translation, UI locale, and default TTS voice.
-  preferredLanguage String              @default("en")
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  readingSessions   ReadingSession[]
-  quizAttempts      QuizAttempt[]
-  baselineAssessment BaselineAssessment?
-  vocabularyWords   VocabularyWord[]
+  preferredLanguage     String                 @default("en")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  readingSessions       ReadingSession[]
+  quizAttempts          QuizAttempt[]
+  baselineAssessment    BaselineAssessment?
+  vocabularyWords       VocabularyWord[]
+  highlightInteractions HighlightInteraction[]
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
@@ -74,11 +75,12 @@ model ReadingSession {
   updatedAt         DateTime      @updatedAt
   completedAt       DateTime?
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  summary         Summary?
-  quizzes         Quiz[]
-  chunkSummaries  ChunkSummary[]
-  vocabularyWords VocabularyWord[]
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary               Summary?
+  quizzes               Quiz[]
+  chunkSummaries        ChunkSummary[]
+  vocabularyWords       VocabularyWord[]
+  highlightInteractions HighlightInteraction[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, status])
@@ -193,4 +195,24 @@ model QuizAttempt {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([quizId, userId])
+}
+
+/// Every time the Highlight Tutor is invoked — the user selected text and
+/// clicked "Ask Tutor" — one row is written here (fire-and-forget, non-blocking).
+/// Used for admin analytics (F-019) and future personalization.
+model HighlightInteraction {
+  id                String   @id @default(cuid())
+  userId            String
+  sessionId         String
+  /// The exact text the reader highlighted (capped at 2 000 chars server-side).
+  selectedText      String   @db.Text
+  /// The surrounding paragraph for context (capped at 4 000 chars server-side).
+  surroundingContext String?  @db.Text
+  createdAt         DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([sessionId])
 }
