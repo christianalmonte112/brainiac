@@ -6,25 +6,37 @@ import { ChunkBody } from "./ChunkBody";
 import { ChunkTimer } from "./ChunkTimer";
 import { VocabularyPanel } from "./VocabularyPanel";
 import { HighlightTutor } from "./HighlightTutor";
+import { SocraticTutor } from "./SocraticTutor";
+import { QuizModal, type QuizQuestion } from "./QuizModal";
 
 interface ChunkReaderProps {
   sessionId: string;
   chunks: string[];
   initialChunkIndex: number;
+  documentTitle: string;
+  documentText: string;
 }
 
 /**
  * Paragraph-chunked reader: one chunk visible at a time, gated behind a
  * micro-summary (F-003) rather than a plain "next" button.
  *
- * Manages two independent slide-in panels:
- * - VocabularyPanel (z-40) — single-word lookup via the vocabulary mapper
- * - HighlightTutor (z-50) — multi-word highlight breakdown via Claude
+ * On completion the user is offered two paths:
+ * - "Start Socratic Session" → opens the full-screen Socratic tutor overlay
+ * - "Read it again" → restarts from chunk 0 (existing behaviour)
  *
- * Both panels have separate open/close state and can coexist; HighlightTutor
- * sits above VocabularyPanel when both are open.
+ * Manages three independent panels:
+ * - VocabularyPanel (z-40) — single-word lookup
+ * - HighlightTutor (z-50) — multi-word Claude breakdown
+ * - SocraticTutor (z-[100]) — full-screen post-completion Q&A
  */
-export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReaderProps) {
+export function ChunkReader({
+  sessionId,
+  chunks,
+  initialChunkIndex,
+  documentTitle,
+  documentText,
+}: ChunkReaderProps) {
   const router = useRouter();
   const totalChunks = chunks.length;
   const alreadyCompleted = initialChunkIndex >= totalChunks;
@@ -39,21 +51,75 @@ export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReade
   // Highlight tutor state
   const [highlightText, setHighlightText] = useState<string | null>(null);
   const [highlightParagraph, setHighlightParagraph] = useState<string | null>(null);
-  const [tutorOpen, setTutorOpen] = useState(false);
+  const [highlightTutorOpen, setHighlightTutorOpen] = useState(false);
 
-  if (alreadyCompleted && !restarted) {
+  // Socratic tutor state
+  const [socraticOpen, setSocraticOpen] = useState(false);
+
+  // Quiz state
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizData, setQuizData] = useState<{ quizId: string; questions: QuizQuestion[] } | null>(null);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
+
+  async function handleStartQuiz() {
+    setIsGeneratingQuiz(true);
+    setQuizError(null);
+    try {
+      const res = await fetch("/api/quiz/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as { quizId: string; questions: QuizQuestion[] };
+      setQuizData(data);
+      setQuizOpen(true);
+    } catch {
+      setQuizError("Couldn't generate quiz. Please try again.");
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  }
+
+  // Completion screen — shown when all chunks are done and no overlay is open.
+  if (alreadyCompleted && !restarted && !socraticOpen && !quizOpen) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-6 py-16 text-center">
-        <h2 className="text-xl font-semibold text-slate-900">You&apos;ve finished this document</h2>
-        <button
-          onClick={() => {
-            setChunkIndex(0);
-            setRestarted(true);
-          }}
-          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          Read it again
-        </button>
+      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+          <span className="text-2xl">✓</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">You&apos;ve finished this document</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Test your retention, go deeper with Socratic questions, or read again.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <button
+            onClick={handleStartQuiz}
+            disabled={isGeneratingQuiz}
+            className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          >
+            {isGeneratingQuiz ? "Generating quiz…" : "📋 Take Quiz"}
+          </button>
+          <button
+            onClick={() => setSocraticOpen(true)}
+            className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition-colors hover:bg-indigo-700"
+          >
+            ✦ Start Socratic Session
+          </button>
+          <button
+            onClick={() => {
+              setChunkIndex(0);
+              setRestarted(true);
+            }}
+            className="rounded-lg border border-slate-200 px-6 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Read it again
+          </button>
+        </div>
+        {quizError && <p className="text-sm text-red-500">{quizError}</p>}
       </div>
     );
   }
@@ -76,51 +142,75 @@ export function ChunkReader({ sessionId, chunks, initialChunkIndex }: ChunkReade
   function handleHighlight(selectedText: string, paragraphText: string) {
     setHighlightText(selectedText);
     setHighlightParagraph(paragraphText);
-    setTutorOpen(true);
+    setHighlightTutorOpen(true);
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
-      <div className="flex flex-col gap-2">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full bg-slate-900 transition-all" style={{ width: `${progressPercent}%` }} />
+    <>
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
+        <div className="flex flex-col gap-2">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full bg-slate-900 transition-all" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>
+              Section {chunkIndex + 1} of {totalChunks}
+            </span>
+            <ChunkTimer key={chunkIndex} />
+          </div>
         </div>
-        <div className="flex justify-between text-xs text-slate-500">
-          <span>
-            Section {chunkIndex + 1} of {totalChunks}
-          </span>
-          <ChunkTimer key={chunkIndex} />
-        </div>
+
+        <ChunkBody
+          key={chunkIndex}
+          sessionId={sessionId}
+          chunkText={chunks[chunkIndex]!}
+          chunkIndex={chunkIndex}
+          totalChunks={totalChunks}
+          onSubmitted={handleSubmitted}
+          onWordClick={handleWordClick}
+          onHighlight={handleHighlight}
+          persist={!restarted}
+        />
+
+        {/* Vocabulary panel — single-word lookup (z-40) */}
+        <VocabularyPanel
+          word={activeWord}
+          isOpen={vocabPanelOpen}
+          sessionId={sessionId}
+          onClose={() => setVocabPanelOpen(false)}
+        />
+
+        {/* Highlight Tutor — multi-word Claude breakdown (z-50, above vocab panel) */}
+        <HighlightTutor
+          selectedText={highlightText}
+          surroundingParagraph={highlightParagraph}
+          sessionId={sessionId}
+          isOpen={highlightTutorOpen}
+          onClose={() => setHighlightTutorOpen(false)}
+        />
       </div>
 
-      <ChunkBody
-        key={chunkIndex}
-        sessionId={sessionId}
-        chunkText={chunks[chunkIndex]!}
-        chunkIndex={chunkIndex}
-        totalChunks={totalChunks}
-        onSubmitted={handleSubmitted}
-        onWordClick={handleWordClick}
-        onHighlight={handleHighlight}
-        persist={!restarted}
-      />
+      {/* Socratic Tutor — full-screen overlay (z-[100]) */}
+      {socraticOpen && (
+        <SocraticTutor
+          sessionId={sessionId}
+          documentTitle={documentTitle}
+          documentText={documentText}
+          onClose={() => setSocraticOpen(false)}
+        />
+      )}
 
-      {/* Vocabulary panel — single-word lookup (z-40) */}
-      <VocabularyPanel
-        word={activeWord}
-        isOpen={vocabPanelOpen}
-        sessionId={sessionId}
-        onClose={() => setVocabPanelOpen(false)}
-      />
-
-      {/* Highlight Tutor — multi-word Claude breakdown (z-50, above vocab panel) */}
-      <HighlightTutor
-        selectedText={highlightText}
-        surroundingParagraph={highlightParagraph}
-        sessionId={sessionId}
-        isOpen={tutorOpen}
-        onClose={() => setTutorOpen(false)}
-      />
-    </div>
+      {/* Quiz Modal — full-screen overlay (z-[90], below Socratic tutor) */}
+      {quizOpen && quizData && (
+        <QuizModal
+          quizId={quizData.quizId}
+          questions={quizData.questions}
+          onClose={() => {
+            setQuizOpen(false);
+            setQuizData(null);
+          }}
+        />
+      )}
+    </>
   );
 }

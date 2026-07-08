@@ -21,6 +21,11 @@ enum SummaryDepth {
   DETAILED
 }
 
+enum TutorRole {
+  USER
+  TUTOR
+}
+
 model User {
   id                    String                 @id
   email                 String?                @unique
@@ -81,6 +86,7 @@ model ReadingSession {
   chunkSummaries        ChunkSummary[]
   vocabularyWords       VocabularyWord[]
   highlightInteractions HighlightInteraction[]
+  tutorMessages         TutorMessage[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, status])
@@ -215,4 +221,21 @@ model HighlightInteraction {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([sessionId])
+}
+
+/// One turn in a Socratic tutor session (Phase 3). Each question Claude asks
+/// and each answer the user gives is stored as a separate row. The full
+/// conversation history is reconstructed client-side from component state and
+/// passed to the API; this table is the persistent log for analytics (F-019)
+/// and future personalization.
+model TutorMessage {
+  id        String    @id @default(cuid())
+  sessionId String
+  role      TutorRole
+  content   String    @db.Text
+  createdAt DateTime  @default(now())
+
+  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }

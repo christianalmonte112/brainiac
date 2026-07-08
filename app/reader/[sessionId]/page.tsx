@@ -29,7 +29,13 @@ export default async function ReadingSessionPage({ params }: SessionPageProps) {
         <h1 className="text-2xl font-bold text-slate-900">{session.title}</h1>
         <p className="mt-1 text-sm text-slate-500">{session.wordCount ?? 0} words</p>
       </header>
-      <ChunkReader sessionId={session.id} chunks={chunks} initialChunkIndex={session.currentChunkIndex} />
+      <ChunkReader
+        sessionId={session.id}
+        chunks={chunks}
+        initialChunkIndex={session.currentChunkIndex}
+        documentTitle={session.title}
+        documentText={session.sourceText}
+      />
     </article>
   );
 }
