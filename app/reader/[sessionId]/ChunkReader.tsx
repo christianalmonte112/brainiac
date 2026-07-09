@@ -8,6 +8,7 @@ import { VocabularyPanel } from "./VocabularyPanel";
 import { HighlightTutor } from "./HighlightTutor";
 import { SocraticTutor } from "./SocraticTutor";
 import { QuizModal, type QuizQuestion } from "./QuizModal";
+import { SummaryModal } from "./SummaryModal";
 
 interface ChunkReaderProps {
   sessionId: string;
@@ -62,6 +63,12 @@ export function ChunkReader({
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
 
+  // Full-session summary state
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryContent, setSummaryContent] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
   async function handleStartQuiz() {
     setIsGeneratingQuiz(true);
     setQuizError(null);
@@ -82,8 +89,28 @@ export function ChunkReader({
     }
   }
 
+  async function handleGetSummary() {
+    setIsGeneratingSummary(true);
+    setSummaryError(null);
+    try {
+      const res = await fetch("/api/summary/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { content: string };
+      setSummaryContent(data.content);
+      setSummaryOpen(true);
+    } catch {
+      setSummaryError("Couldn't generate summary. Please try again.");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }
+
   // Completion screen — shown when all chunks are done and no overlay is open.
-  if (alreadyCompleted && !restarted && !socraticOpen && !quizOpen) {
+  if (alreadyCompleted && !restarted && !socraticOpen && !quizOpen && !summaryOpen) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
@@ -96,6 +123,13 @@ export function ChunkReader({
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <button
+            onClick={handleGetSummary}
+            disabled={isGeneratingSummary}
+            className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          >
+            {isGeneratingSummary ? "Generating summary..." : "📄 Get Summary"}
+          </button>
           <button
             onClick={handleStartQuiz}
             disabled={isGeneratingQuiz}
@@ -120,6 +154,7 @@ export function ChunkReader({
           </button>
         </div>
         {quizError && <p className="text-sm text-red-500">{quizError}</p>}
+        {summaryError && <p className="text-sm text-red-500">{summaryError}</p>}
       </div>
     );
   }
@@ -208,6 +243,18 @@ export function ChunkReader({
           onClose={() => {
             setQuizOpen(false);
             setQuizData(null);
+          }}
+        />
+      )}
+
+      {/* Summary Modal — full-session summary overlay (z-[80]) */}
+      {summaryOpen && summaryContent && (
+        <SummaryModal
+          documentTitle={documentTitle}
+          content={summaryContent}
+          onClose={() => {
+            setSummaryOpen(false);
+            setSummaryContent(null);
           }}
         />
       )}
