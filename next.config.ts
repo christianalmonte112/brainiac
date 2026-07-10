@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    CLERK_CLOCK_SKEW_MS: "60000",
+  },
 };
 
 export default nextConfig;

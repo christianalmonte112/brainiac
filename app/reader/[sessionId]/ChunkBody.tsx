@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { submitChunkSummary } from "../actions";
 import { extractCandidateKeywords } from "@/lib/reading-sessions/keywords";
 import { ClickableParagraph } from "./ClickableParagraph";
+import { VoiceReader } from "./VoiceReader";
 
 interface ChunkBodyProps {
   sessionId: string;
@@ -147,6 +148,8 @@ export function ChunkBody({
           />
         ))}
       </div>
+
+      <VoiceReader chunkText={chunkText} />
 
       {/* Stage: reading */}
       {stage === "reading" && (
