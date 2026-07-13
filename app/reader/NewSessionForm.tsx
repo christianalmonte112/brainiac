@@ -3,12 +3,14 @@
 import { useActionState, useMemo, useState } from "react";
 import { countWords } from "@/lib/text/word-count";
 import { createReadingSession, type CreateSessionActionState } from "./actions";
+import { ImagePageUpload } from "./ImagePageUpload";
 
 const initialState: CreateSessionActionState = {};
 
 /** Collapsible "new document" form with a live word count. */
 export function NewSessionForm() {
   const [isOpen, setIsOpen] = useState(false);
+  const [inputMode, setInputMode] = useState<"paste" | "photos">("paste");
   const [sourceText, setSourceText] = useState("");
   const [state, formAction, isPending] = useActionState(createReadingSession, initialState);
   const wordCount = useMemo(() => countWords(sourceText), [sourceText]);
@@ -33,9 +35,39 @@ export function NewSessionForm() {
         maxLength={200}
         className="rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
       />
+
+      <div className="flex gap-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setInputMode("paste")}
+          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
+            inputMode === "paste" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          Paste text
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputMode("photos")}
+          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
+            inputMode === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          📷 Upload photos
+        </button>
+      </div>
+
+      {inputMode === "photos" && (
+        <ImagePageUpload onExtracted={(text) => setSourceText((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))} disabled={isPending} />
+      )}
+
       <textarea
         name="sourceText"
-        placeholder="Paste the text you want to read..."
+        placeholder={
+          inputMode === "paste"
+            ? "Paste the text you want to read..."
+            : "Extracted text will appear here — review and edit before saving."
+        }
         required
         rows={6}
         value={sourceText}
