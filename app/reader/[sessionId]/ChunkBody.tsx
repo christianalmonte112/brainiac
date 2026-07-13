@@ -124,6 +124,11 @@ export function ChunkBody({
   }
 
   async function handleVoiceSummarySubmit(summary: string): Promise<void> {
+    if (!persist) {
+      onSubmitted(isLastChunk);
+      return;
+    }
+
     setError(null);
 
     try {
