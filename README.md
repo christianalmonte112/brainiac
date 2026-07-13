@@ -20,7 +20,7 @@ What sets Brainiac apart from competitors like Readability and Mindgrasp is the 
 | Auth | [Clerk](https://clerk.com) |
 | Database | [Supabase](https://supabase.com) (PostgreSQL) |
 | ORM | [Prisma](https://www.prisma.io) |
-| AI | [Anthropic Claude API](https://docs.anthropic.com) |
+| AI | [Anthropic Claude API](https://docs.anthropic.com) + [ElevenLabs](https://elevenlabs.io) |
 | Deployment | [Vercel](https://vercel.com) |
 
 ---
@@ -28,8 +28,10 @@ What sets Brainiac apart from competitors like Readability and Mindgrasp is the 
 ## Features
 
 - **Smart reading sessions** — Paste or upload text and read with AI-assisted comprehension tools
-- **AI summaries** — Claude generates concise summaries at configurable depth
-- **Comprehension quizzes** — Auto-generated questions to test understanding
+- **AI summaries + quiz scoring** — Claude generates full-session summaries and comprehension checks
+- **Comprehension quizzes** — Auto-generated questions with score + feedback
+- **Voice support** — ElevenLabs-powered voice reader and voice summarization
+- **Photo-to-text intake** — Upload page images and extract text into the reader flow
 - **Progress tracking** — Session history, scores, and reading streaks
 - **Secure auth** — Sign in/up via Clerk with protected routes
 
@@ -74,6 +76,9 @@ DATABASE_URL=postgresql://...
 
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
+
+# ElevenLabs (voice reader + voice summarization)
+ELEVENLABS_API_KEY=...
 ```
 
 ### 3. Database setup

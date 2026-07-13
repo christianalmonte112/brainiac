@@ -70,29 +70,33 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 ## Phase 3 — AI & Voice
 
-**Status:** In Progress  
+**Status:** In Progress (Core scope complete; multilingual rollout deferred)  
 **Started:** June 2026
 
 | Item | Priority | Feature | Description | Status |
 |------|----------|---------|-------------|--------|
 | AI summary scoring | P0 | F-003 | Claude scores each chunk micro-summary 0–100 with encouraging feedback | ✅ |
-| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | ✅ |
+| Admin analytics dashboard | P0 | F-019 | `/admin` — signups, assessment completion, session activity; owner-only gate | ✅ |
 | AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth | ✅ |
 | Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring | ✅ |
-| Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader | 🔲 Planned |
+| Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader | ✅ |
 | Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API | ✅ |
 | Multilingual support — language selection, translated assessment & UI, multilingual TTS | P1 | F-011 | Language picker before onboarding; saves to User.preferredLanguage; drives assessment translation, UI locale, TTS voice | 🔲 Planned |
-| Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension | 🔲 Planned |
+| Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension | ✅ |
 | Spanish language support milestone | P1 | F-011b | Spanish-first rollout: language selection before onboarding + Spanish translated assessment/content | 🔲 Planned |
 
-**Exit criteria:** AI summary scoring, admin analytics, full-session summaries, quizzes, and voice reader are live ✅; remaining scope focuses on photo upload, multilingual UX/TTS, and voice summarization.
+**Exit criteria:** AI summary scoring, admin analytics, full-session summaries, quizzes, voice reader, voice summarization, and photo upload are live ✅. Multilingual work (F-011/F-011b) remains deferred.
+
+### Phase 3 Stability Check (July 2026)
+
+- Completed focused bug hunts for both Phase 2 and Phase 3 surfaces.
+- Latest quality gates pass: `npm run lint` ✅ and `npm run build` ✅.
+- No known blocking defects remain for entering Phase 4 planning/implementation.
 
 ### Remaining Phase 3 Build Order (Authoritative)
 
-1. **F-012 — Voice Summarization** (user records spoken summary, Claude transcribes/scores)
-2. **F-018 — Image/Photo Upload (Claude Vision)** (extract text from photos into chunk reader)
-3. **F-011 — Multilingual Support** (language selection, translated onboarding/UI, multilingual TTS defaults)
-4. **F-011b — Spanish Language Support Milestone** (ship Spanish end-to-end as the first multilingual rollout)
+1. **F-011 — Multilingual Support** (language selection, translated onboarding/UI, multilingual TTS defaults)
+2. **F-011b — Spanish Language Support Milestone** (ship Spanish end-to-end as the first multilingual rollout)
 
 ---
 

@@ -13,23 +13,23 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 |----|---------|-------|--------|
 | F-001 | Authentication | 0 | ✅ Shipped |
 | F-002 | Route Protection | 0 | ✅ Shipped |
-| F-003 | Reading Sessions | 2 | 🔲 Planned |
-| F-004 | AI Summaries | 3 | 🔲 Planned |
-| F-005 | Comprehension Quizzes | 3 | 🔲 Planned |
-| F-006 | Dashboard & Progress | 2 / 4 | 🔲 Planned |
+| F-003 | Reading Sessions | 2 | ✅ Shipped |
+| F-004 | AI Summaries | 3 | ✅ Shipped |
+| F-005 | Comprehension Quizzes | 3 | ✅ Shipped |
+| F-006 | Dashboard & Progress | 2 / 4 | 🚧 In Progress |
 | F-007 | Onboarding Tour | 5 | 🔲 Planned |
 | F-008 | File Upload | Post-MVP | 🔲 Planned |
 | F-009 | URL Import | Post-MVP | 🔲 Planned |
-| F-010 | Voice Reader (ElevenLabs) | 3 | 🔲 Planned |
+| F-010 | Voice Reader (ElevenLabs) | 3 | ✅ Shipped |
 | F-011 | Multilingual Support (language selection + translated UI/assessment/TTS) | 3 | 🔲 Planned |
-| F-012 | Voice Summarization | 3 | 🔲 Planned |
+| F-012 | Voice Summarization | 3 | ✅ Shipped |
 | F-013 | Visual Learning Games | 4 | 🔲 Planned |
 | F-014 | Memory Games | 4 | 🔲 Planned |
 | F-015 | Listening Games (Song Lyrics) | 4 | 🔲 Planned |
 | F-016 | Community Platform | 4 | 🔲 Planned |
-| F-017 | Onboarding Baseline Assessment | 2 | 🔲 Planned |
-| F-018 | Image/Photo Upload (Claude Vision) | 3 | 🔲 Planned |
-| F-019 | Admin Analytics Dashboard | 3 | 🔲 Planned |
+| F-017 | Onboarding Baseline Assessment | 2 | ✅ Shipped |
+| F-018 | Image/Photo Upload (Claude Vision) | 3 | ✅ Shipped |
+| F-019 | Admin Analytics Dashboard | 3 | ✅ Shipped |
 | F-011b | Spanish Language Support Milestone | 3 | 🔲 Planned |
 
 **Legend:** ✅ Shipped · 🚧 In Progress · 🔲 Planned
@@ -38,12 +38,8 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 
 ## Phase 3 Remaining Build Order (Authoritative)
 
-1. **F-019 — Admin Analytics Dashboard** (must ship before inviting beta testers)
-2. **F-011 — Voice Reader with ElevenLabs API** (text to speech, multiple voices)
-3. **F-012 — Voice Summarization** (user records spoken summary, Claude transcribes/scores)
-4. **F-018 — Image/Photo Upload (Claude Vision)** (extract text from photos into chunk reader)
-5. **F-004 — AI Full Session Summary** (Claude generates full summary after document completion)
-6. **F-011b — Spanish Language Support** (language selection before onboarding + Spanish translated assessment/content)
+1. **F-011 — Multilingual Support** (language selection, translated onboarding/UI, multilingual TTS defaults)
+2. **F-011b — Spanish Language Support** (language selection before onboarding + Spanish translated assessment/content)
 
 ---
 
@@ -100,7 +96,7 @@ All application routes require authentication except sign-in and sign-up pages.
 
 ## F-003: Reading Sessions
 
-**Phase:** 1 · **Status:** 🔲 Planned
+**Phase:** 2 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -141,17 +137,17 @@ All actions verify `auth().userId` matches session owner.
 
 ### Acceptance Criteria
 
-- [ ] Create session with title and text
-- [ ] View session list on dashboard
-- [ ] Open session detail page
+- [x] Create session with title and text
+- [x] View session list on dashboard
+- [x] Open session detail page
 - [ ] Edit and delete own sessions
-- [ ] Cannot access another user's session (403)
+- [x] Cannot access another user's session (403)
 
 ---
 
 ## F-004: AI Summaries
 
-**Phase:** 2 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -191,17 +187,16 @@ Claude generates a readable summary of the session text at the user's chosen dep
 
 ### Acceptance Criteria
 
-- [ ] Generate summary at each depth level
-- [ ] Summary persists and loads on return visit
-- [ ] Regenerate replaces previous summary
-- [ ] Loading and error states displayed
-- [ ] API key never exposed to client
+- [x] Generate full-session summary after document completion
+- [x] Summary persists in the database and can be regenerated
+- [x] Loading and error states displayed
+- [x] API key never exposed to client
 
 ---
 
 ## F-005: Comprehension Quizzes
 
-**Phase:** 3 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -243,10 +238,10 @@ Stored as `QuizAttempt` with full answer map.
 
 ### Acceptance Criteria
 
-- [ ] Generate quiz with 5+ valid questions
+- [x] Generate quiz with 5+ valid questions
 - [ ] All options are plausible (manual QA on prompts)
-- [ ] Submit calculates correct score
-- [ ] Explanations shown for incorrect answers
+- [x] Submit calculates correct score
+- [x] Explanations shown for incorrect answers
 - [ ] Retake creates new attempt; history preserved
 - [ ] Session marked COMPLETED on first quiz attempt
 
@@ -254,7 +249,7 @@ Stored as `QuizAttempt` with full answer map.
 
 ## F-006: Dashboard & Progress
 
-**Phase:** 4 · **Status:** 🔲 Planned
+**Phase:** 2 / 4 · **Status:** 🚧 In Progress
 
 ### Description
 
@@ -360,7 +355,7 @@ Paste a URL to fetch and extract article text for a new reading session.
 
 ## F-010: Voice Reader (ElevenLabs)
 
-**Phase:** 3 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -381,10 +376,10 @@ Text-to-speech reader with celebrity-style voices powered by the ElevenLabs API.
 
 ### Acceptance Criteria
 
-- [ ] At least 3 voice options available
-- [ ] Audio plays for session text without errors
-- [ ] Playback speed adjustable (0.75× – 2×)
-- [ ] API key never exposed to client
+- [x] At least 3 voice options available
+- [x] Audio plays for session text without errors
+- [x] Playback speed adjustable (0.75× – 2×)
+- [x] API key never exposed to client
 
 ---
 
@@ -449,7 +444,7 @@ Spanish, French, Portuguese, Mandarin, Arabic, Hindi, and English. Additional la
 
 ## F-012: Voice Summarization
 
-**Phase:** 3 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -465,9 +460,9 @@ Users record their own spoken summary of a reading session. AI evaluates the rec
 
 ### Acceptance Criteria
 
-- [ ] Audio recording works in browser (Web Audio API)
-- [ ] Transcription generated server-side
-- [ ] Comprehension score returned with specific feedback
+- [x] Audio recording works in browser (Web Audio API)
+- [x] Transcription generated server-side
+- [x] Comprehension score returned with specific feedback
 - [ ] Recording stored optionally for progress history
 
 ---
@@ -552,7 +547,7 @@ Reddit-style community platform where users share reading recommendations, discu
 
 ## F-017: Onboarding Baseline Assessment
 
-**Phase:** 2 · **Status:** 🔲 Planned
+**Phase:** 2 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -605,18 +600,18 @@ Stored permanently in `BaselineAssessment` — one record per user, never overwr
 
 ### Acceptance Criteria
 
-- [ ] Assessment shown automatically on first login
-- [ ] Cannot access reader until assessment complete
-- [ ] All four score dimensions saved to `BaselineAssessment`
-- [ ] Baseline displayed on dashboard
-- [ ] Future session scores compared to baseline
+- [x] Assessment shown automatically on first login
+- [x] Cannot access reader until assessment complete
+- [x] All four score dimensions saved to `BaselineAssessment`
+- [x] Baseline displayed on dashboard
+- [x] Future session scores compared to baseline
 - [ ] Monthly progress report shows growth vs. baseline
 
 ---
 
 ## F-018: Image/Photo Upload
 
-**Phase:** 3 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -642,21 +637,21 @@ Works for textbooks, articles, handwritten notes, and any readable image where O
 
 ### Acceptance Criteria
 
-- [ ] Upload JPEG/PNG image and receive extracted text
-- [ ] Extracted text editable before session save
-- [ ] Session flows into chunk reader identically to pasted text
-- [ ] Claude API key never exposed to client
-- [ ] Graceful error when image is unreadable or too blurry
+- [x] Upload JPEG/PNG image and receive extracted text
+- [x] Extracted text editable before session save
+- [x] Session flows into chunk reader identically to pasted text
+- [x] Claude API key never exposed to client
+- [x] Graceful error when image is unreadable or too blurry
 
 ---
 
 ## F-019: Admin Analytics Dashboard
 
-**Phase:** 3 · **Status:** 🔲 Planned
+**Phase:** 3 · **Status:** ✅ Shipped
 
 ### Description
 
-A private page at `/admin/stats` visible only to the app owner. Provides real engagement data from existing Prisma tables — no external analytics tools needed — so the owner can make data-driven decisions about readiness for wider user testing rather than guessing.
+A private page at `/admin` visible only to the app owner. Provides real engagement data from existing Prisma tables — no external analytics tools needed — so the owner can make data-driven decisions about readiness for wider user testing rather than guessing.
 
 **Must be built before inviting outside beta testers.**
 
@@ -678,14 +673,14 @@ A private page at `/admin/stats` visible only to the app owner. Provides real en
 
 ### User Flow
 
-1. Owner navigates to `/admin/stats` while signed in
+1. Owner navigates to `/admin` while signed in
 2. Page verifies `userId === ADMIN_USER_ID`; any mismatch returns 404
 3. Stats rendered as a simple server-side dashboard (no client JS needed)
 4. Owner uses data to decide when to open beta invites
 
 ### Technical Details
 
-- Route: `app/admin/stats/page.tsx` — pure Server Component
+- Route: `app/admin/page.tsx` — pure Server Component
 - Auth check: `const { userId } = await auth(); if (userId !== process.env.ADMIN_USER_ID) notFound();`
 - All queries use existing Prisma models — no schema changes required
 - `ADMIN_USER_ID` added to `.env.local` and Vercel env vars (not committed)
@@ -693,11 +688,11 @@ A private page at `/admin/stats` visible only to the app owner. Provides real en
 
 ### Acceptance Criteria
 
-- [ ] Route returns 404 for any non-owner user
-- [ ] Route returns 404 for unauthenticated requests
-- [ ] All five metrics visible and accurate against live Supabase data
-- [ ] Page loads in under 3 seconds
-- [ ] `ADMIN_USER_ID` is an env var, never hardcoded in source
+- [x] Route returns 404 for any non-owner user
+- [x] Route returns 404 for unauthenticated requests
+- [x] All five metrics visible and accurate against live Supabase data
+- [x] Page loads in under 3 seconds
+- [x] `ADMIN_USER_ID` is an env var, never hardcoded in source
 
 ---
 
