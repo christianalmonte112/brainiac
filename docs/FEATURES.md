@@ -5,6 +5,8 @@
 
 Detailed feature specifications for Brainiac. For product context see [PRD.md](./PRD.md); for implementation see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXPLAINED.md) and [PHASE3_EXPLAINED.md](./PHASE3_EXPLAINED.md).
+
 ---
 
 ## Feature Index
