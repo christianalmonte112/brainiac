@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { elevenlabs } from "@/lib/elevenlabs/client";
+import { getElevenLabsClient } from "@/lib/elevenlabs/client";
 
 const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
 const MAX_TTS_CHARS = 4000;
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const text = rawText.trim().slice(0, MAX_TTS_CHARS);
 
   try {
-    const audioStream = await elevenlabs.textToSpeech.stream(voiceId, {
+    const audioStream = await getElevenLabsClient().textToSpeech.stream(voiceId, {
       text,
       modelId: "eleven_multilingual_v2",
     });

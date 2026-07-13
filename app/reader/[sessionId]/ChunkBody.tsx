@@ -5,10 +5,11 @@ import { submitChunkSummary } from "../actions";
 import { extractCandidateKeywords } from "@/lib/reading-sessions/keywords";
 import { ClickableParagraph } from "./ClickableParagraph";
 import { VoiceReader } from "./VoiceReader";
+import { VoiceSummary } from "./VoiceSummary";
 
 interface ChunkBodyProps {
   sessionId: string;
-  chunkText: string;
+  chunkText?: string;
   chunkIndex: number;
   totalChunks: number;
   onSubmitted: (completed: boolean) => void;
@@ -62,8 +63,9 @@ export function ChunkBody({
   onHighlight,
   persist = true,
 }: ChunkBodyProps) {
+  const safeChunkText = chunkText ?? "";
   const [stage, setStage] = useState<"reading" | "summarizing" | "scored">("reading");
-  const [mode, setMode] = useState<"summary" | "keywords">("summary");
+  const [mode, setMode] = useState<"summary" | "voice" | "keywords">("summary");
   const [summaryText, setSummaryText] = useState("");
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -75,7 +77,7 @@ export function ChunkBody({
     mountedAtRef.current = Date.now();
   }, []);
 
-  const candidateKeywords = useMemo(() => extractCandidateKeywords(chunkText), [chunkText]);
+  const candidateKeywords = useMemo(() => extractCandidateKeywords(safeChunkText), [safeChunkText]);
   const isLastChunk = chunkIndex === totalChunks - 1;
   const canSubmit = mode === "summary" ? summaryText.trim().length > 0 : selectedKeywords.length === 3;
 
@@ -87,12 +89,67 @@ export function ChunkBody({
     });
   }
 
+  function handleScoredAdvance(result: Awaited<ReturnType<typeof submitChunkSummary>>) {
+    if (result.aiScore === undefined) {
+      onSubmitted(result.completed);
+      return;
+    }
+
+    setScoringResult({
+      aiScore: result.aiScore,
+      aiFeedback: result.aiFeedback ?? "",
+      completed: result.completed,
+    });
+    setStage("scored");
+  }
+
+  async function runSummarySubmission(summary: string): Promise<void> {
+    const chunkSeconds =
+      mountedAtRef.current !== null ? Math.round((Date.now() - mountedAtRef.current) / 1000) : 0;
+
+    try {
+      const result = await submitChunkSummary({
+        sessionId,
+        chunkIndex,
+        totalChunks,
+        mode: "summary",
+        summaryText: summary.trim(),
+        chunkSeconds,
+        chunkText: safeChunkText,
+      });
+      handleScoredAdvance(result);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async function handleVoiceSummarySubmit(summary: string): Promise<void> {
+    setError(null);
+
+    try {
+      await runSummarySubmission(summary);
+    } catch {
+      setError("Couldn't save your summary. Please try again.");
+    }
+  }
+
   function handleSubmit() {
     if (!canSubmit) return;
     setError(null);
 
     if (!persist) {
       onSubmitted(isLastChunk);
+      return;
+    }
+
+    if (mode === "summary") {
+      startTransition(async () => {
+        try {
+          await runSummarySubmission(summaryText);
+        } catch {
+          setError("Couldn't save your summary. Please try again.");
+        }
+      });
       return;
     }
 
@@ -105,26 +162,13 @@ export function ChunkBody({
           sessionId,
           chunkIndex,
           totalChunks,
-          mode,
-          summaryText: mode === "summary" ? summaryText.trim() : undefined,
-          keywords: mode === "keywords" ? selectedKeywords : undefined,
+          mode: "keywords",
+          keywords: selectedKeywords,
           chunkSeconds,
-          chunkText,
+          chunkText: safeChunkText,
         });
 
-        // Keywords mode: no score, advance immediately.
-        if (mode === "keywords" || result.aiScore === undefined) {
-          onSubmitted(result.completed);
-          return;
-        }
-
-        // Summary mode: show the score card before advancing.
-        setScoringResult({
-          aiScore: result.aiScore,
-          aiFeedback: result.aiFeedback ?? "",
-          completed: result.completed,
-        });
-        setStage("scored");
+        onSubmitted(result.completed);
       } catch {
         setError("Couldn't save your summary. Please try again.");
       }
@@ -139,7 +183,7 @@ export function ChunkBody({
           stage !== "reading" ? "opacity-40" : ""
         }`}
       >
-        {chunkText.split("\n\n").map((paragraph, index) => (
+        {safeChunkText.split("\n\n").map((paragraph, index) => (
           <ClickableParagraph
             key={index}
             text={paragraph}
@@ -149,7 +193,7 @@ export function ChunkBody({
         ))}
       </div>
 
-      <VoiceReader chunkText={chunkText} />
+      <VoiceReader chunkText={safeChunkText} />
 
       {/* Stage: reading */}
       {stage === "reading" && (
@@ -174,6 +218,14 @@ export function ChunkBody({
               Write a summary
             </button>
             <button
+              onClick={() => setMode("voice")}
+              className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
+                mode === "voice" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              🎤 Record summary
+            </button>
+            <button
               onClick={() => setMode("keywords")}
               className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
                 mode === "keywords" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -192,6 +244,8 @@ export function ChunkBody({
               rows={2}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
+          ) : mode === "voice" ? (
+            <VoiceSummary onUseSummary={handleVoiceSummarySubmit} disabled={isPending} />
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
@@ -218,19 +272,21 @@ export function ChunkBody({
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPending}
-            className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isPending
-              ? mode === "summary"
-                ? "Scoring…"
-                : "Saving…"
-              : isLastChunk
-                ? "Finish"
-                : "Submit & continue"}
-          </button>
+          {mode !== "voice" && (
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isPending}
+              className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {isPending
+                ? mode === "summary"
+                  ? "Scoring…"
+                  : "Saving…"
+                : isLastChunk
+                  ? "Finish"
+                  : "Submit & continue"}
+            </button>
+          )}
         </div>
       )}
 

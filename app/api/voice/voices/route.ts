@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { elevenlabs } from "@/lib/elevenlabs/client";
+import { getElevenLabsClient } from "@/lib/elevenlabs/client";
 
 interface VoiceResult {
   id: string;
@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   try {
-    const response = await elevenlabs.voices.search();
+    const response = await getElevenLabsClient().voices.search();
     const voices = (response.voices ?? []).map<VoiceResult>((voice) => ({
       id: voice.voiceId,
       name: voice.name ?? "Unnamed voice",

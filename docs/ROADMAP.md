@@ -1,6 +1,6 @@
 # Roadmap — Brainiac
 
-**Last updated:** June 2026
+**Last updated:** July 2026
 
 This roadmap outlines the development phases for Brainiac from MVP through post-launch enhancements. Timelines are estimates and may shift based on feedback and priorities.
 
@@ -76,25 +76,23 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | Item | Priority | Feature | Description | Status |
 |------|----------|---------|-------------|--------|
 | AI summary scoring | P0 | F-003 | Claude scores each chunk micro-summary 0–100 with encouraging feedback | ✅ |
-| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | 🚧 Next |
-| AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth | 🔲 Planned |
-| Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring | 🔲 Planned |
+| Admin analytics dashboard | P0 | F-019 | `/admin/stats` — signups, assessment completion, session activity; owner-only gate | ✅ |
+| AI summaries (full session) | P0 | F-004 | Claude-powered summaries at configurable depth | ✅ |
+| Comprehension quizzes | P0 | F-005 | Auto-generated MCQ quizzes with scoring | ✅ |
 | Image/photo upload (OCR via Claude Vision) | P1 | F-018 | Upload photo of book page or printed text; extract text into chunk reader | 🔲 Planned |
-| Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API | 🔲 Planned |
+| Voice Reader with celebrity-style voices | P1 | F-010 | Text-to-speech via ElevenLabs API | ✅ |
 | Multilingual support — language selection, translated assessment & UI, multilingual TTS | P1 | F-011 | Language picker before onboarding; saves to User.preferredLanguage; drives assessment translation, UI locale, TTS voice | 🔲 Planned |
 | Voice summarization | P2 | F-012 | User records their own spoken summary; AI evaluates comprehension | 🔲 Planned |
 | Spanish language support milestone | P1 | F-011b | Spanish-first rollout: language selection before onboarding + Spanish translated assessment/content | 🔲 Planned |
 
-**Exit criteria:** AI summary scoring live ✅; admin dashboard showing real engagement data; AI summaries and quizzes available; users can upload photos, listen in multiple languages, and record voice summaries.
+**Exit criteria:** AI summary scoring, admin analytics, full-session summaries, quizzes, and voice reader are live ✅; remaining scope focuses on photo upload, multilingual UX/TTS, and voice summarization.
 
 ### Remaining Phase 3 Build Order (Authoritative)
 
-1. **F-019 — Admin Analytics Dashboard** (build first, required before inviting beta testers)
-2. **F-011 — Voice Reader with ElevenLabs API** (TTS with multiple voices)
-3. **F-012 — Voice Summarization** (user records spoken summary, Claude transcribes/scores)
-4. **F-018 — Image/Photo Upload (Claude Vision)** (extract text from photos into chunk reader)
-5. **F-004 — AI Full Session Summary** (Claude summarizes full completed document)
-6. **F-011b — Spanish Language Support** (language selection before onboarding + Spanish translated content)
+1. **F-012 — Voice Summarization** (user records spoken summary, Claude transcribes/scores)
+2. **F-018 — Image/Photo Upload (Claude Vision)** (extract text from photos into chunk reader)
+3. **F-011 — Multilingual Support** (language selection, translated onboarding/UI, multilingual TTS defaults)
+4. **F-011b — Spanish Language Support Milestone** (ship Spanish end-to-end as the first multilingual rollout)
 
 ---
 

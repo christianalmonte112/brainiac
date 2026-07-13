@@ -42,8 +42,11 @@ export function ChunkReader({
   const totalChunks = chunks.length;
   const alreadyCompleted = initialChunkIndex >= totalChunks;
 
-  const [chunkIndex, setChunkIndex] = useState(() => Math.min(initialChunkIndex, totalChunks - 1));
-  const [restarted, setRestarted] = useState(false);
+  const [chunkIndex, setChunkIndex] = useState(() =>
+    alreadyCompleted ? 0 : Math.min(initialChunkIndex, totalChunks - 1),
+  );
+  const [completed, setCompleted] = useState(false);
+  const [restarted, setRestarted] = useState(alreadyCompleted);
 
   // Vocabulary panel state
   const [activeWord, setActiveWord] = useState<string | null>(null);
@@ -110,7 +113,7 @@ export function ChunkReader({
   }
 
   // Completion screen — shown when all chunks are done and no overlay is open.
-  if (alreadyCompleted && !restarted && !socraticOpen && !quizOpen && !summaryOpen) {
+  if (completed && !socraticOpen && !quizOpen && !summaryOpen) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
@@ -145,6 +148,7 @@ export function ChunkReader({
           </button>
           <button
             onClick={() => {
+              setCompleted(false);
               setChunkIndex(0);
               setRestarted(true);
             }}
@@ -159,13 +163,15 @@ export function ChunkReader({
     );
   }
 
-  const progressPercent = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+  const safeChunkIndex = Math.min(Math.max(chunkIndex, 0), totalChunks - 1);
+  const progressPercent = Math.round(((safeChunkIndex + 1) / totalChunks) * 100);
 
   function handleSubmitted(completed: boolean) {
     if (completed) {
+      setCompleted(true);
       router.refresh();
     } else {
-      setChunkIndex((current) => current + 1);
+      setChunkIndex((current) => Math.min(current + 1, totalChunks - 1));
     }
   }
 
@@ -189,17 +195,17 @@ export function ChunkReader({
           </div>
           <div className="flex justify-between text-xs text-slate-500">
             <span>
-              Section {chunkIndex + 1} of {totalChunks}
+              Section {safeChunkIndex + 1} of {totalChunks}
             </span>
-            <ChunkTimer key={chunkIndex} />
+            <ChunkTimer key={safeChunkIndex} />
           </div>
         </div>
 
         <ChunkBody
-          key={chunkIndex}
+          key={safeChunkIndex}
           sessionId={sessionId}
-          chunkText={chunks[chunkIndex]!}
-          chunkIndex={chunkIndex}
+          chunkText={chunks[safeChunkIndex]}
+          chunkIndex={safeChunkIndex}
           totalChunks={totalChunks}
           onSubmitted={handleSubmitted}
           onWordClick={handleWordClick}

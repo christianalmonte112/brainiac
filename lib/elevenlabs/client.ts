@@ -1,21 +1,14 @@
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
-/**
- * ElevenLabs client singleton.
- *
- * Mirrors our other server-side clients so hot reload in development doesn't
- * create a fresh SDK client instance on every module reload.
- */
-declare global {
-  var elevenlabsGlobal: ElevenLabsClient | undefined;
-}
+let _client: ElevenLabsClient | null = null;
 
-export const elevenlabs =
-  globalThis.elevenlabsGlobal ??
-  new ElevenLabsClient({
-    apiKey: process.env.ELEVENLABS_API_KEY,
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.elevenlabsGlobal = elevenlabs;
+export function getElevenLabsClient() {
+  if (!_client) {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw new Error("ELEVENLABS_API_KEY is not set");
+    }
+    _client = new ElevenLabsClient({ apiKey });
+  }
+  return _client;
 }

@@ -14,7 +14,12 @@ const STOPWORDS = new Set([
  * case-insensitively, keeps first-seen casing, strips punctuation, and
  * filters short/common words.
  */
-export function extractCandidateKeywords(chunkText: string, max: number = 12): string[] {
+export function extractCandidateKeywords(
+  chunkText: string | undefined,
+  max: number = 12,
+): string[] {
+  if (!chunkText) return [];
+
   const seen = new Set<string>();
   const candidates: string[] = [];
 
