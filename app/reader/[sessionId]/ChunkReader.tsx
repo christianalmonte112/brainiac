@@ -83,6 +83,10 @@ export function ChunkReader({
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { quizId: string; questions: QuizQuestion[] };
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        setQuizError("No quiz questions were generated for this document yet. Please try again.");
+        return;
+      }
       setQuizData(data);
       setQuizOpen(true);
     } catch {

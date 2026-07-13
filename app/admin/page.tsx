@@ -1,3 +1,4 @@
+import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 function formatPercent(numerator: number, denominator: number): string {
@@ -24,9 +25,9 @@ export default async function AdminPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const [
-    totalSignups,
+    onboardedUsers,
     baselineCompletedCount,
-    newSignupsThisWeek,
+    onboardedThisWeek,
     totalSessionsCreated,
     totalSessionsCompleted,
     totalChunksRead,
@@ -51,20 +52,37 @@ export default async function AdminPage() {
     prisma.vocabularyWord.count(),
   ]);
 
-  const assessmentCompletionRate = formatPercent(baselineCompletedCount, totalSignups);
+  // The true Clerk signup count — NOT the same as onboardedUsers above.
+  //
+  // There's no Clerk -> Postgres signup webhook: a User row in Postgres is
+  // only ever created inside submitBaselineAssessment, at the very END of
+  // onboarding (see app/onboarding/assessment/actions.ts). That means
+  // prisma.user.count() can only ever count people who already finished
+  // onboarding — it structurally cannot represent "signups," and comparing
+  // it to baselineCompletedCount can never reveal real drop-off, since
+  // those two numbers are (almost) always equal by construction. Clerk
+  // itself is the only accurate source for how many people actually signed
+  // up, onboarded or not.
+  const client = await clerkClient();
+  const totalClerkSignups = await client.users.getCount();
+
+  const assessmentCompletionRate = formatPercent(baselineCompletedCount, totalClerkSignups);
   const sessionCompletionRate = formatPercent(totalSessionsCompleted, totalSessionsCreated);
   const averageQuizScore = formatScoreAsPercent(avgQuizScore._avg.score);
-  const averageWordsPerUser = totalSignups > 0 ? (totalVocabularyWords / totalSignups).toFixed(1) : "0.0";
+  // Deliberately averaged over onboarded users, not total signups — vocabulary
+  // words can only ever belong to a user who has a Postgres row at all, so
+  // "per onboarded user" is the meaningful denominator here.
+  const averageWordsPerUser = onboardedUsers > 0 ? (totalVocabularyWords / onboardedUsers).toFixed(1) : "0.0";
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Users</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total signups" value={totalSignups.toLocaleString()} />
+          <StatCard label="Total signups" value={totalClerkSignups.toLocaleString()} />
           <StatCard label="Baseline completed" value={baselineCompletedCount.toLocaleString()} />
           <StatCard label="Assessment completion rate" value={assessmentCompletionRate} />
-          <StatCard label="New signups (7 days)" value={newSignupsThisWeek.toLocaleString()} />
+          <StatCard label="Onboarded this week" value={onboardedThisWeek.toLocaleString()} />
         </div>
       </section>
 

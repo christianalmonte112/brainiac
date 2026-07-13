@@ -47,11 +47,14 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
   const [stage, setStage] = useState<"quiz" | "submitting" | "results">("quiz");
   const [results, setResults] = useState<QuizResultsResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const hasQuestions = questions.length > 0;
 
-  const currentQuestion = questions[currentIndex]!;
+  const currentQuestion = hasQuestions ? questions[currentIndex] : null;
   const selectedAnswer = answers[currentIndex];
-  const isLastQuestion = currentIndex === questions.length - 1;
-  const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
+  const isLastQuestion = hasQuestions ? currentIndex === questions.length - 1 : false;
+  const progressPercent = hasQuestions
+    ? Math.round(((currentIndex + 1) / questions.length) * 100)
+    : 0;
 
   function selectAnswer(index: number) {
     if (stage !== "quiz") return;
@@ -93,6 +96,30 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
     }
   }
 
+  if (!hasQuestions) {
+    return (
+      <div className="fixed inset-0 z-[90] flex flex-col bg-white">
+        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500">📋</span>
+            <span className="text-sm font-semibold text-slate-900">Retention Quiz</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            Close
+          </button>
+        </header>
+        <div className="flex flex-1 items-center justify-center px-6 text-center">
+          <p className="max-w-md text-sm text-slate-600">
+            We could not build quiz questions for this document yet. Please close and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Results screen ────────────────────────────────────────────────────────
   if (stage === "results" && results) {
     const pct = Math.round(results.score * 100);
@@ -131,9 +158,9 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
 
             {/* Per-question breakdown */}
             <div className="flex flex-col gap-4">
-              {results.results.map((r, i) => (
+              {results.results.map((r) => (
                 <div
-                  key={i}
+                  key={`${r.questionIndex}-${r.prompt}`}
                   className={`rounded-xl border p-4 ${
                     r.isCorrect ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"
                   }`}
@@ -219,11 +246,11 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-5">
           <p className="text-base font-medium leading-relaxed text-slate-900">
-            {currentQuestion.prompt}
+            {currentQuestion?.prompt}
           </p>
 
           <div className="flex flex-col gap-3">
-            {currentQuestion.options.map((option, i) => {
+            {currentQuestion?.options.map((option, i) => {
               const isSelected = selectedAnswer === i;
               const label = ["A", "B", "C", "D"][i];
               return (

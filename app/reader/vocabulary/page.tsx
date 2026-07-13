@@ -1,16 +1,35 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import type { VocabularyWord } from "@prisma/client";
+import Link from "next/link";
 
-export default async function VocabularyPage() {
+const PAGE_SIZE = 50;
+
+interface VocabularyPageProps {
+  searchParams?: Promise<{ page?: string }> | { page?: string };
+}
+
+export default async function VocabularyPage({ searchParams }: VocabularyPageProps) {
   const { userId } = await auth();
+  const resolvedSearchParams =
+    searchParams && typeof (searchParams as Promise<{ page?: string }>).then === "function"
+      ? await (searchParams as Promise<{ page?: string }>)
+      : ((searchParams as { page?: string } | undefined) ?? {});
 
-  const words = userId
+  const pageRaw = Number(resolvedSearchParams.page ?? "1");
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const skip = (page - 1) * PAGE_SIZE;
+
+  const rows = userId
     ? await prisma.vocabularyWord.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
+        skip,
+        take: PAGE_SIZE + 1,
       })
     : [];
+  const hasMore = rows.length > PAGE_SIZE;
+  const words = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
@@ -48,6 +67,17 @@ export default async function VocabularyPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {hasMore && (
+        <div className="pt-1">
+          <Link
+            href={`/reader/vocabulary?page=${page + 1}`}
+            className="inline-flex rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Load more
+          </Link>
+        </div>
       )}
     </div>
   );

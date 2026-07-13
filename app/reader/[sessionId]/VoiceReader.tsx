@@ -31,7 +31,8 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
   const [error, setError] = useState<string | null>(null);
 
   const hasAudio = Boolean(audioUrl);
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercent =
+    duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
   const formattedTime = useMemo(() => {
     const current = formatTime(currentTime);
     const total = formatTime(duration);

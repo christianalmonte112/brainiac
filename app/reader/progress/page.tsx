@@ -17,7 +17,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 export default async function ProgressPage() {
   const { userId } = await auth();
 
-  const [baseline, completedSessions, vocabularyWordsCount] = userId
+  const [baseline, completedSessions, vocabularyWordsCount, user] = userId
     ? await Promise.all([
         prisma.baselineAssessment.findUnique({ where: { userId } }),
         prisma.readingSession.findMany({
@@ -25,8 +25,14 @@ export default async function ProgressPage() {
           select: { wordCount: true, elapsedSeconds: true, completedAt: true },
         }),
         prisma.vocabularyWord.count({ where: { userId } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
       ])
-    : [null, [], 0];
+    : [null, [], 0, null];
+
+  // Falls back to UTC if the browser-detected timezone hasn't synced yet
+  // (e.g. a user's very first page load, or JS-disabled) — same behavior
+  // as before timezone tracking existed, just not the common case.
+  const timezone = user?.timezone ?? "UTC";
 
   if (!baseline) {
     return (
@@ -47,8 +53,8 @@ export default async function ProgressPage() {
     .map((session: CompletedSessionStats) => session.completedAt)
     .filter((date: Date | null): date is Date => date !== null);
 
-  const streak = computeReadingStreak(completionDates);
-  const growthSeries = buildGrowthSeries(completedSessions);
+  const streak = computeReadingStreak(completionDates, timezone);
+  const growthSeries = buildGrowthSeries(completedSessions, timezone);
   const currentWPM = computeAverageWPM(completedSessions);
 
   return (

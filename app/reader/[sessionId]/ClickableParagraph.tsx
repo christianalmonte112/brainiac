@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-const WORD_PATTERN = /([A-Za-z][A-Za-z'-]*)/;
+// Includes à-ÿ/À-Ÿ (accented Latin letters: é, ï, ñ, etc.) and the curly
+// apostrophe ’ (U+2019) alongside the straight one — curly quotes are the
+// default output of Word, Google Docs, Notes, and most published websites,
+// so without this, pasting from any of those breaks contractions like
+// "don't" into a clickable "don" + a dead, unclickable "'" + a clickable
+// "t", and splits loanwords like "naïve" or "café" into unclickable pieces.
+const WORD_PATTERN = /([A-Za-zà-ÿÀ-Ÿ][A-Za-zà-ÿÀ-Ÿ'\u2019-]*)/;
 
 interface TooltipState {
   /** Horizontal center of the selection in viewport px. */

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { NavHeader } from "./NavHeader";
 import { Sidebar } from "./Sidebar";
+import { TimezoneSync } from "./TimezoneSync";
 
 export default async function ReaderLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -20,13 +21,17 @@ export default async function ReaderLayout({ children }: { children: React.React
     redirect("/onboarding/assessment");
   }
 
-  const sessions = await prisma.readingSession.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [sessions, user] = await Promise.all([
+    prisma.readingSession.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
+  ]);
 
   return (
     <div className="flex h-screen flex-col">
+      <TimezoneSync currentTimezone={user?.timezone ?? null} />
       <NavHeader />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar sessions={sessions} />

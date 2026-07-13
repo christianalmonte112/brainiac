@@ -122,7 +122,7 @@ export function SocraticTutor({ sessionId, documentTitle, documentText, onClose 
 
   function handleSubmit() {
     const answer = userInput.trim();
-    if (!answer || isStreaming || inputLocked) return;
+    if (!answer || !canSendAnswer) return;
 
     const userMessage: Message = { role: "user", content: answer };
     const updatedHistory = [...messages, userMessage];
@@ -164,6 +164,15 @@ export function SocraticTutor({ sessionId, documentTitle, documentText, onClose 
     MAX_QUESTIONS,
   );
   const showCounter = !isSessionDone && questionCount <= MAX_QUESTIONS;
+  const noTutorQuestionYet = messages.filter((m) => m.role === "tutor").length === 0;
+  const awaitingFirstQuestion = noTutorQuestionYet && !isStreaming;
+  const blockedByInitialFailure = awaitingFirstQuestion && Boolean(error);
+  const canSendAnswer = !isStreaming && !inputLocked && !noTutorQuestionYet;
+
+  function handleRetryFirstQuestion() {
+    if (isStreaming) return;
+    askNextQuestion([], false);
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white">
@@ -228,6 +237,17 @@ export function SocraticTutor({ sessionId, documentTitle, documentText, onClose 
 
           {error && <p className="self-center text-sm text-red-500">{error}</p>}
 
+          {blockedByInitialFailure && (
+            <div className="self-center">
+              <button
+                onClick={handleRetryFirstQuestion}
+                className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+              >
+                Retry first question
+              </button>
+            </div>
+          )}
+
           {/* Completion card — appears inline after Claude's closing message
               so the user can scroll back through the full conversation. */}
           {isSessionDone && (
@@ -260,9 +280,11 @@ export function SocraticTutor({ sessionId, documentTitle, documentText, onClose 
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isStreaming || inputLocked}
+            disabled={!canSendAnswer}
             placeholder={
-              inputLocked
+              blockedByInitialFailure
+                ? "Retry first question to continue…"
+                : inputLocked
                 ? "Session closing…"
                 : "Type your answer… (Enter to send, Shift+Enter for new line)"
             }
@@ -271,7 +293,7 @@ export function SocraticTutor({ sessionId, documentTitle, documentText, onClose 
           />
           <button
             onClick={handleSubmit}
-            disabled={!userInput.trim() || isStreaming || inputLocked}
+            disabled={!userInput.trim() || !canSendAnswer}
             className="shrink-0 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             Send

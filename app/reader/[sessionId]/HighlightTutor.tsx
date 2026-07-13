@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 interface HighlightTutorProps {
@@ -22,7 +22,7 @@ type StreamStatus = "idle" | "streaming" | "done" | "error";
  * Lives at z-50 so it sits above the VocabularyPanel (z-40) — both panels
  * have independent open/close state and can coexist without interference.
  * The panel is always mounted so the slide animation plays on open/close;
- * content is keyed by selectedText so state resets on each new highlight.
+ * content is keyed by selectedText/session context so state resets on each new highlight.
  */
 export function HighlightTutor({
   selectedText,
@@ -51,7 +51,7 @@ export function HighlightTutor({
 
         {selectedText && (
           <HighlightTutorContent
-            key={selectedText}
+            key={`${selectedText}-${sessionId}-${surroundingParagraph ?? ""}`}
             selectedText={selectedText}
             surroundingParagraph={surroundingParagraph}
             sessionId={sessionId}
@@ -72,15 +72,10 @@ function HighlightTutorContent({
   sessionId: string;
 }) {
   const [streamedText, setStreamedText] = useState("");
-  const [status, setStatus] = useState<StreamStatus>("idle");
-  const abortRef = useRef<AbortController | null>(null);
+  const [status, setStatus] = useState<StreamStatus>("streaming");
 
   useEffect(() => {
     const controller = new AbortController();
-    abortRef.current = controller;
-
-    setStatus("streaming");
-    setStreamedText("");
 
     (async () => {
       try {

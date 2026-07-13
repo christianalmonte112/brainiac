@@ -34,6 +34,14 @@ model User {
   /// selection screen shown before the baseline assessment (F-011). Drives
   /// assessment translation, UI locale, and default TTS voice.
   preferredLanguage     String                 @default("en")
+  /// IANA timezone name (e.g. "America/Los_Angeles"), captured client-side
+  /// via TimezoneSync.tsx. Nullable because it isn't known until the user's
+  /// first authenticated page load with JS running. Used so the reading
+  /// streak and progress-chart dates reflect the reader's actual calendar
+  /// day instead of the server's UTC day — without this, a session at, say,
+  /// 4pm Pacific can land on a different "day" than one at 3:59pm the same
+  /// afternoon, purely because that moment crosses midnight UTC.
+  timezone              String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   readingSessions       ReadingSession[]

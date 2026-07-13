@@ -1,3 +1,5 @@
+import { localDateString } from "./timezone";
+
 export interface CompletedSessionStats {
   wordCount: number | null;
   elapsedSeconds: number;
@@ -21,8 +23,8 @@ export function computeAverageWPM(sessions: CompletedSessionStats[]): number | n
   return Math.round(totalWords / (totalSeconds / 60));
 }
 
-/** Builds a time series of per-session WPM for the growth chart. */
-export function buildGrowthSeries(sessions: CompletedSessionStats[]): GrowthPoint[] {
+/** Builds a time series of per-session WPM for the growth chart, dated in the reader's local timezone. */
+export function buildGrowthSeries(sessions: CompletedSessionStats[], timezone: string): GrowthPoint[] {
   return sessions
     .filter(
       (s): s is CompletedSessionStats & { completedAt: Date } =>
@@ -30,7 +32,7 @@ export function buildGrowthSeries(sessions: CompletedSessionStats[]): GrowthPoin
     )
     .sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime())
     .map((session) => ({
-      date: session.completedAt.toISOString().slice(0, 10),
+      date: localDateString(session.completedAt, timezone),
       wpm: Math.round((session.wordCount ?? 0) / (session.elapsedSeconds / 60)),
     }));
 }
