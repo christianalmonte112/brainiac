@@ -18,7 +18,7 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-005 | Comprehension Quizzes | 3 | ✅ Shipped |
 | F-006 | Dashboard & Progress | 2 / 4 | 🚧 In Progress |
 | F-007 | Onboarding Tour | 5 | 🔲 Planned |
-| F-008 | File Upload | Post-MVP | 🔲 Planned |
+| F-008 | Direct File Upload (.txt/.pdf) | Post-MVP | 🔲 Planned |
 | F-009 | URL Import | Post-MVP | 🔲 Planned |
 | F-010 | Voice Reader (ElevenLabs) | 3 | ✅ Shipped |
 | F-011 | Multilingual Support (language selection + translated UI/assessment/TTS) | 3 | 🔲 Planned |
@@ -28,7 +28,7 @@ Detailed feature specifications for Brainiac. For product context see [PRD.md](.
 | F-015 | Listening Games (Song Lyrics) | 4 | 🔲 Planned |
 | F-016 | Community Platform | 4 | 🔲 Planned |
 | F-017 | Onboarding Baseline Assessment | 2 | ✅ Shipped |
-| F-018 | Image/Photo Upload (Claude Vision) | 3 | ✅ Shipped |
+| F-018 | Image/Photo Upload (Claude Vision OCR) | 3 | ✅ Shipped |
 | F-019 | Admin Analytics Dashboard | 3 | ✅ Shipped |
 | F-011b | Spanish Language Support Milestone | 3 | 🔲 Planned |
 
