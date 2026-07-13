@@ -177,7 +177,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 
 | Item | Phase to Address | Status |
 |------|------------------|--------|
-| Rename package from `readwise-app` to `brainiac` | Phase 2 | 🔲 Pending |
+| Rename package from `readwise-app` to `brainiac` | Phase 2 | ✅ Done |
 | Add Zod validation for all Server Actions | Phase 2 | ✅ Done |
 | Prisma client singleton for serverless | Phase 2 | ✅ Done |
 | `BaselineAssessment` migration | Phase 2 | ✅ Done |
