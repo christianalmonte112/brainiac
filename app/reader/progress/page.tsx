@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { computeReadingStreak } from "@/lib/progress/streak";
 import { buildGrowthSeries, computeAverageWPM, type CompletedSessionStats } from "@/lib/progress/stats";
-import { GrowthChart } from "./GrowthChart";
+import { TickerChart } from "./TickerChart";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -108,7 +108,7 @@ export default async function ProgressPage() {
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Reading speed over time</h2>
         <div className="mt-3 rounded-xl border border-slate-200 p-4">
-          <GrowthChart points={growthSeries} baselineWPM={baseline.readingSpeedWPM} />
+          <TickerChart points={growthSeries} baselineWPM={baseline.readingSpeedWPM} />
         </div>
       </div>
     </div>
