@@ -49,6 +49,7 @@ model User {
   baselineAssessment    BaselineAssessment?
   vocabularyWords       VocabularyWord[]
   highlightInteractions HighlightInteraction[]
+  vocabularyReviews     VocabularyReview[]
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
@@ -117,9 +118,32 @@ model VocabularyWord {
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceSession ReadingSession? @relation(fields: [sourceSessionId], references: [id], onDelete: SetNull)
+  review        VocabularyReview?
 
   @@unique([userId, word])
   @@index([userId, createdAt(sort: Desc)])
+}
+
+/// Spaced-repetition scheduling state for one vocabulary word (F-014).
+/// Created lazily the first time a word is reviewed in the memory game —
+/// words with no row yet are treated as due immediately. On a correct answer
+/// the interval climbs a Leitner-style ladder; on a miss it resets to zero so
+/// the word comes back in the same review session.
+model VocabularyReview {
+  id               String    @id @default(cuid())
+  userId           String
+  vocabularyWordId String    @unique
+  nextReviewAt     DateTime  @default(now())
+  intervalDays     Int       @default(0)
+  correctStreak    Int       @default(0)
+  lastReviewedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabularyWord VocabularyWord @relation(fields: [vocabularyWordId], references: [id], onDelete: Cascade)
+
+  @@index([userId, nextReviewAt])
 }
 
 /// A user's micro-summary or chosen keywords for one chunk of a reading
