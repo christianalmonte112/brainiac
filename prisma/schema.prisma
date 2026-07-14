@@ -50,6 +50,9 @@ model User {
   vocabularyWords       VocabularyWord[]
   highlightInteractions HighlightInteraction[]
   vocabularyReviews     VocabularyReview[]
+  visualGameAttempts    VisualGameAttempt[]
+  listeningGames        ListeningGame[]
+  listeningAttempts     ListeningAttempt[]
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
@@ -96,6 +99,7 @@ model ReadingSession {
   vocabularyWords       VocabularyWord[]
   highlightInteractions HighlightInteraction[]
   tutorMessages         TutorMessage[]
+  visualGames           VisualGame[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, status])
@@ -270,4 +274,113 @@ model TutorMessage {
   session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
+}
+
+/// F-013 — which visual comprehension exercise a game contains.
+enum VisualGameType {
+  MATCHING
+  SEQUENCING
+}
+
+/// One generated visual learning game (F-013), tied to the reading session
+/// whose sourceText it was generated from. Mirrors the Quiz pattern.
+model VisualGame {
+  id        String         @id @default(cuid())
+  sessionId String
+  gameType  VisualGameType
+  model     String
+  createdAt DateTime       @default(now())
+
+  session  ReadingSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  items    VisualGameItem[]
+  attempts VisualGameAttempt[]
+
+  @@index([sessionId, gameType])
+}
+
+/// One exercise round inside a visual game. `itemData` holds the
+/// client-safe display payload (terms + shuffled descriptions for MATCHING,
+/// shuffled steps for SEQUENCING); `correctAnswer` holds the solution as
+/// `{ selections: number[] }` and must NEVER be sent to the client — games
+/// are graded server-side in the submitVisualGameAttempt action.
+model VisualGameItem {
+  id            String         @id @default(cuid())
+  visualGameId  String
+  orderIndex    Int
+  type          VisualGameType
+  prompt        String         @db.Text
+  itemData      Json
+  correctAnswer Json
+
+  game VisualGame @relation(fields: [visualGameId], references: [id], onDelete: Cascade)
+
+  @@index([visualGameId, orderIndex])
+}
+
+/// One graded play-through of a visual game (F-013).
+model VisualGameAttempt {
+  id           String   @id @default(cuid())
+  visualGameId String
+  userId       String
+  answers      Json
+  score        Float
+  createdAt    DateTime @default(now())
+
+  game VisualGame @relation(fields: [visualGameId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([visualGameId, userId])
+}
+
+/// One listening comprehension game built from user-pasted song lyrics
+/// (F-015). The lyrics are supplied by the user — there is deliberately no
+/// lyric search or licensing integration.
+model ListeningGame {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  model     String
+  createdAt DateTime @default(now())
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments ListeningSegment[]
+  attempts ListeningAttempt[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+/// One Claude-segmented chunk of the lyrics. `questions` holds
+/// `{ blankAnswers: string[], question: { prompt, options, correctIndex } }`
+/// — the answer key. Like VisualGameItem.correctAnswer, it is server-only:
+/// the generate route strips it before responding, and grading happens in
+/// the submitListeningAttempt action.
+model ListeningSegment {
+  id                    String @id @default(cuid())
+  listeningGameId       String
+  orderIndex            Int
+  lyricText             String @db.Text
+  vocabularyAnnotations Json
+  blankedText           String @db.Text
+  questions             Json
+
+  game ListeningGame @relation(fields: [listeningGameId], references: [id], onDelete: Cascade)
+
+  @@index([listeningGameId, orderIndex])
+}
+
+/// One graded play-through of a listening game (F-015).
+model ListeningAttempt {
+  id              String   @id @default(cuid())
+  listeningGameId String
+  userId          String
+  answers         Json
+  score           Float
+  createdAt       DateTime @default(now())
+
+  game ListeningGame @relation(fields: [listeningGameId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([listeningGameId, userId])
 }

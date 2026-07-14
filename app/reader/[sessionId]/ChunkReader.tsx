@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChunkBody } from "./ChunkBody";
 import { ChunkTimer } from "./ChunkTimer";
@@ -150,6 +151,12 @@ export function ChunkReader({
           >
             ✦ Start Socratic Session
           </button>
+          <Link
+            href={`/reader/games/visual?sessionId=${sessionId}`}
+            className="rounded-lg bg-violet-600 px-6 py-3 font-medium text-white transition-colors hover:bg-violet-700"
+          >
+            🧩 Visual Games
+          </Link>
           <button
             onClick={() => {
               setCompleted(false);
