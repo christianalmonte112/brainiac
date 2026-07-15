@@ -110,7 +110,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | Visual learning games | P2 | F-013 | Interactive visual comprehension exercises |
 | Memory games | P2 | F-014 | Retention-focused recall games tied to session content |
 | Listening games with AI-broken-down song lyrics | P2 | F-015 | Song lyric analysis and listening comprehension |
-| Reddit-style community platform | P2 | F-016 | User posts, discussions, shared reading recommendations |
+| Reddit-style community platform | P2 | F-016 | 🚧 MVP shipped — posts + threaded comments + delete-own; votes/moderation planned |
 | Dashboard analytics & streaks | P1 | F-006 | Avg score, session count, reading streak |
 | Landing page redesign | P1 | — | Brainiac branding, value prop, CTA |
 | Responsive mobile layout | P1 | — | Core flows work on mobile |

@@ -16,6 +16,9 @@ export function NavHeader() {
           <Link href="/reader/progress" className="hover:text-slate-900">
             Progress
           </Link>
+          <Link href="/community" className="hover:text-slate-900">
+            Community
+          </Link>
         </nav>
       </div>
       <UserButton />
