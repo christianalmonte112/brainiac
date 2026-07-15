@@ -10,6 +10,14 @@ import {
   type CompletedSessionStats,
   type QuizAttemptStat,
 } from "@/lib/progress/stats";
+import {
+  accuracyForQuestionType,
+  analyzeWeakAreas,
+  buildFrictionPoints,
+  buildNextActions,
+  collectQuestionResultsFromAttempts,
+  computeVocabularyMastery,
+} from "@/lib/progress/learningInsights";
 import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
 import { TickerChart } from "./TickerChart";
 
@@ -31,52 +39,92 @@ function scoreBadgeClass(pct: number): string {
   return "bg-rose-50 text-rose-700 ring-rose-200";
 }
 
-/** F-006 progress dashboard — stats, recent sessions, baseline comparison, growth chart. */
+/** F-006 progress dashboard — stats, learning insights, baseline comparison, growth chart. */
 export default async function ProgressPage() {
   const { userId } = await auth();
 
-  const [baseline, completedSessions, vocabularyWordsCount, dueReviewCount, user, totalSessions, recentSessions, quizAttempts] =
-    userId
-      ? await Promise.all([
-          prisma.baselineAssessment.findUnique({ where: { userId } }),
-          prisma.readingSession.findMany({
-            where: { userId, status: "COMPLETED" },
-            select: { wordCount: true, elapsedSeconds: true, completedAt: true },
-          }),
-          prisma.vocabularyWord.count({ where: { userId } }),
-          prisma.vocabularyWord.count({ where: dueVocabularyWordsWhere(userId) }),
-          prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
-          prisma.readingSession.count({ where: { userId, status: { not: "ARCHIVED" } } }),
-          prisma.readingSession.findMany({
-            where: { userId, status: { not: "ARCHIVED" } },
-            orderBy: { updatedAt: "desc" },
-            take: RECENT_SESSION_LIMIT,
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              updatedAt: true,
-              quizzes: {
-                select: {
-                  attempts: {
-                    where: { userId },
-                    orderBy: { createdAt: "desc" },
-                    select: { score: true, createdAt: true },
-                  },
+  const [
+    baseline,
+    completedSessions,
+    vocabularyWords,
+    dueReviewCount,
+    user,
+    totalSessions,
+    recentSessions,
+    quizAttempts,
+    gradedAttempts,
+    inProgressSessions,
+    recentHighlights,
+  ] = userId
+    ? await Promise.all([
+        prisma.baselineAssessment.findUnique({ where: { userId } }),
+        prisma.readingSession.findMany({
+          where: { userId, status: "COMPLETED" },
+          select: { wordCount: true, elapsedSeconds: true, completedAt: true },
+        }),
+        prisma.vocabularyWord.findMany({
+          where: { userId },
+          select: { review: { select: { intervalDays: true, correctStreak: true } } },
+        }),
+        prisma.vocabularyWord.count({ where: dueVocabularyWordsWhere(userId) }),
+        prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
+        prisma.readingSession.count({ where: { userId, status: { not: "ARCHIVED" } } }),
+        prisma.readingSession.findMany({
+          where: { userId, status: { not: "ARCHIVED" } },
+          orderBy: { updatedAt: "desc" },
+          take: RECENT_SESSION_LIMIT,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            updatedAt: true,
+            quizzes: {
+              select: {
+                attempts: {
+                  where: { userId },
+                  orderBy: { createdAt: "desc" },
+                  select: { score: true, createdAt: true },
                 },
               },
             },
-          }),
-          prisma.quizAttempt.findMany({
-            where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
-            select: {
-              score: true,
-              createdAt: true,
-              quiz: { select: { sessionId: true } },
+          },
+        }),
+        prisma.quizAttempt.findMany({
+          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          select: {
+            score: true,
+            createdAt: true,
+            quiz: { select: { sessionId: true } },
+          },
+        }),
+        prisma.quizAttempt.findMany({
+          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          select: {
+            answers: true,
+            quiz: {
+              select: {
+                questions: {
+                  orderBy: { orderIndex: "asc" },
+                  select: { orderIndex: true, prompt: true, correctIndex: true },
+                },
+              },
             },
-          }),
-        ])
-      : [null, [], 0, 0, null, 0, [], []];
+          },
+        }),
+        prisma.readingSession.findMany({
+          where: { userId, status: "ACTIVE" },
+          orderBy: { updatedAt: "desc" },
+          take: 3,
+          select: { id: true, title: true },
+        }),
+        prisma.highlightInteraction.findMany({
+          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { selectedText: true },
+        }),
+      ])
+    : [null, [], [], 0, null, 0, [], [], [], [], []];
 
   const timezone = user?.timezone ?? "UTC";
 
@@ -110,11 +158,66 @@ export default async function ProgressPage() {
   }));
   const avgQuizScore = computeAverageQuizScore(attemptStats);
 
+  const vocabularyMastery = computeVocabularyMastery(vocabularyWords);
+  const questionResults = collectQuestionResultsFromAttempts(gradedAttempts);
+  const weakAreas = analyzeWeakAreas(questionResults);
+  const frictionPoints = buildFrictionPoints(weakAreas, recentHighlights);
+  const inferenceAccuracy = accuracyForQuestionType(questionResults, "inference");
+
+  const lowScoreSessions = recentSessions
+    .map((session) => {
+      const flatAttempts = session.quizzes.flatMap((q) => q.attempts);
+      const scorePct = latestQuizScorePercent(flatAttempts);
+      return scorePct !== null && scorePct < 60
+        ? { id: session.id, title: session.title, scorePercent: scorePct }
+        : null;
+    })
+    .filter((s): s is { id: string; title: string; scorePercent: number } => s !== null);
+
+  const unfinishedQuizzes = recentSessions
+    .filter((session) => {
+      if (session.status !== "COMPLETED") return false;
+      const flatAttempts = session.quizzes.flatMap((q) => q.attempts);
+      return flatAttempts.length === 0;
+    })
+    .map((session) => ({ id: session.id, title: session.title }));
+
+  const nextActions = buildNextActions({
+    dueReviewCount,
+    atRiskWordCount: vocabularyMastery.atRiskCount,
+    inProgressSessions,
+    lowScoreSessions,
+    unfinishedQuizzes,
+    weakAreas,
+    highlightCount30Days: recentHighlights.length,
+  });
+
+  const memoryGameSubtext =
+    dueReviewCount === 0
+      ? vocabularyMastery.atRiskCount > 0
+        ? `${vocabularyMastery.atRiskCount} word${vocabularyMastery.atRiskCount === 1 ? "" : "s"} at risk — practice to lock them in.`
+        : "All caught up — no words due for review."
+      : `${dueReviewCount} word${dueReviewCount === 1 ? "" : "s"} due · ${vocabularyMastery.masteryPercent ?? 0}% mastered overall`;
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-10">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Your progress</h1>
         <p className="mt-1 text-sm text-slate-500">Baseline taken {baseline.takenAt.toLocaleDateString()}.</p>
+      </div>
+
+      <div className="rounded-xl border border-slate-900 bg-slate-900 p-5 text-white">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">What to work on next</h2>
+        <ul className="mt-3 flex flex-col gap-3">
+          {nextActions.map((action) => (
+            <li key={`${action.href}-${action.title}`}>
+              <Link href={action.href} className="group block rounded-lg bg-white/10 px-4 py-3 transition-colors hover:bg-white/15">
+                <p className="text-sm font-semibold">{action.title}</p>
+                <p className="mt-0.5 text-xs text-slate-300">{action.reason}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -173,19 +276,30 @@ export default async function ProgressPage() {
         </div>
       )}
 
+      {frictionPoints.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+          <h2 className="text-sm font-semibold text-amber-900">Friction points (last 30 days)</h2>
+          <ul className="mt-2 flex flex-col gap-1">
+            {frictionPoints.map((bullet) => (
+              <li key={bullet} className="text-sm text-amber-800">
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Link
         href="/reader/games/memory"
         className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:bg-slate-50"
       >
         <div>
           <p className="text-sm font-semibold text-slate-900">Memory game</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {dueReviewCount === 0
-              ? "All caught up — no words due for review."
-              : `${dueReviewCount} word${dueReviewCount === 1 ? "" : "s"} due for review.`}
-          </p>
+          <p className="mt-0.5 text-xs text-slate-500">{memoryGameSubtext}</p>
         </div>
-        <span className="text-sm font-medium text-slate-600">Practice →</span>
+        <span className="text-sm font-medium text-slate-600">
+          {dueReviewCount > 0 ? `${dueReviewCount} due →` : "Practice →"}
+        </span>
       </Link>
 
       <div>
@@ -212,12 +326,18 @@ export default async function ProgressPage() {
             <tr>
               <td className="py-2 text-slate-700">Vocabulary</td>
               <td className="py-2 text-slate-900">{baseline.vocabularyScore}%</td>
-              <td className="py-2 text-slate-900">{vocabularyWordsCount} words saved</td>
+              <td className="py-2 text-slate-900">
+                {vocabularyMastery.masteryPercent !== null
+                  ? `${vocabularyMastery.masteryPercent}% mastered (${vocabularyMastery.totalWords} saved${vocabularyMastery.atRiskCount > 0 ? `, ${vocabularyMastery.atRiskCount} at risk` : ""})`
+                  : "—"}
+              </td>
             </tr>
             <tr>
               <td className="py-2 text-slate-700">Inference</td>
               <td className="py-2 text-slate-900">{baseline.inferenceScore}%</td>
-              <td className="py-2 text-slate-500">—</td>
+              <td className="py-2 text-slate-900">
+                {inferenceAccuracy !== null ? `${inferenceAccuracy}%` : "—"}
+              </td>
             </tr>
           </tbody>
         </table>

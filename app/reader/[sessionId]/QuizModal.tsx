@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { SessionLearningReport } from "@/lib/progress/learningInsights";
 
 export interface QuizQuestion {
   id: string;
@@ -26,6 +28,7 @@ interface QuizResultsResponse {
   correctCount: number;
   totalCount: number;
   results: QuizResult[];
+  report?: SessionLearningReport;
 }
 
 interface QuizModalProps {
@@ -46,6 +49,8 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
   const [answers, setAnswers] = useState<(number | null)[]>(() => new Array(questions.length).fill(null));
   const [stage, setStage] = useState<"quiz" | "submitting" | "results">("quiz");
   const [results, setResults] = useState<QuizResultsResponse | null>(null);
+  const [report, setReport] = useState<SessionLearningReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const hasQuestions = questions.length > 0;
 
@@ -77,13 +82,22 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
   async function submitQuiz() {
     setStage("submitting");
     setSubmitError(null);
+    setReport(null);
+
+    const payload = answers.map((a) => a ?? -1);
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+
       const response = await fetch("/api/quiz/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quizId, answers }),
+        body: JSON.stringify({ quizId, answers: payload }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -95,6 +109,45 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
       setStage("quiz");
     }
   }
+
+  useEffect(() => {
+    if (stage !== "results" || !results) return;
+
+    const scorePercent = Math.round(results.score * 100);
+    let cancelled = false;
+
+    async function loadReport() {
+      setReportLoading(true);
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15_000);
+
+        const response = await fetch("/api/quiz/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quizId, scorePercent }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok || cancelled) return;
+
+        const data = (await response.json()) as { report: SessionLearningReport };
+        if (!cancelled) setReport(data.report);
+      } catch {
+        // Report is optional — score screen still works without it.
+      } finally {
+        if (!cancelled) setReportLoading(false);
+      }
+    }
+
+    void loadReport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, results, quizId]);
 
   if (!hasQuestions) {
     return (
@@ -133,7 +186,7 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
         <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
           <div className="flex items-center gap-2">
             <span className="text-slate-500">📋</span>
-            <span className="text-sm font-semibold text-slate-900">Quiz Results</span>
+            <span className="text-sm font-semibold text-slate-900">Session report</span>
           </div>
           <button
             onClick={onClose}
@@ -151,10 +204,83 @@ export function QuizModal({ quizId, questions, onClose }: QuizModalProps) {
               <p className="text-sm font-medium text-slate-700">
                 {results.correctCount} out of {results.totalCount} correct
               </p>
-              <p className="text-xs text-slate-500">
-                {pct >= 80 ? "Excellent retention!" : pct >= 60 ? "Good effort — review the explanations below." : "Keep reading and try again."}
-              </p>
+              {report ? (
+                <>
+                  <p className="text-xs text-slate-600">{report.headline}</p>
+                  {report.insightLine && (
+                    <p className="text-xs text-slate-500">{report.insightLine}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  {pct >= 80 ? "Excellent retention!" : pct >= 60 ? "Good effort — review the explanations below." : "Keep reading and try again."}
+                </p>
+              )}
             </div>
+
+            {reportLoading && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                Loading learning snapshot…
+              </div>
+            )}
+
+            {report && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Learning snapshot</h3>
+                <dl className="mt-3 grid gap-2 text-sm">
+                  {report.avgScore30Day !== null && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-500">vs. 30-day average</dt>
+                      <dd className="font-medium text-slate-900">
+                        {report.scoreDelta !== null && report.scoreDelta > 0 ? "+" : ""}
+                        {report.scoreDelta ?? 0} pts ({report.avgScore30Day}% avg)
+                      </dd>
+                    </div>
+                  )}
+                  {report.chunkSummaryAvg !== null && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-500">Chunk summary score</dt>
+                      <dd className="font-medium text-slate-900">{report.chunkSummaryAvg}% avg</dd>
+                    </div>
+                  )}
+                  {report.bestChunkIndex !== null && report.chunkSummaryAvg !== null && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-500">Strongest section</dt>
+                      <dd className="font-medium text-slate-900">Chunk {report.bestChunkIndex + 1}</dd>
+                    </div>
+                  )}
+                  {report.weakestChunkIndex !== null && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-500">Trickiest section</dt>
+                      <dd className="font-medium text-slate-900">Chunk {report.weakestChunkIndex + 1}</dd>
+                    </div>
+                  )}
+                  {report.vocabularyWordsAdded > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-500">Vocabulary saved</dt>
+                      <dd className="font-medium text-slate-900">
+                        {report.vocabularyWordsAdded} word{report.vocabularyWordsAdded === 1 ? "" : "s"}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                {report.weakAreas.length > 0 && (
+                  <ul className="mt-3 flex flex-col gap-1 border-t border-slate-200 pt-3 text-xs text-slate-600">
+                    {report.weakAreas.map((area) => (
+                      <li key={area.type}>
+                        {area.label} needs work — {area.accuracyPercent}% on this quiz
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Link
+                  href="/reader/progress"
+                  className="mt-4 inline-block text-xs font-medium text-slate-700 underline"
+                >
+                  View full progress →
+                </Link>
+              </div>
+            )}
 
             {/* Per-question breakdown */}
             <div className="flex flex-col gap-4">

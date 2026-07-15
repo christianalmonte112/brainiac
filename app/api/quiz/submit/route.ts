@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "answers array is required" }, { status: 400 });
   }
 
-  // Fetch quiz with questions and verify the session belongs to the caller.
   const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
 
   const { questions } = quiz;
 
-  // Grade answers.
   const results = questions.map((q, i) => {
     const selected = answers[i] ?? -1;
     const isCorrect = selected === q.correctIndex;
@@ -56,7 +54,6 @@ export async function POST(request: Request) {
   const totalCount = questions.length;
   const score = totalCount > 0 ? correctCount / totalCount : 0;
 
-  // Persist the attempt.
   await prisma.quizAttempt.create({
     data: {
       quizId,
