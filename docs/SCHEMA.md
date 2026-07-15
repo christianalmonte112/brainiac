@@ -450,3 +450,15 @@ prisma.quizAttempt.aggregate({
 | Spaced repetition | `ReviewSchedule` linked to `Question` |
 | Uploaded files | `FileAsset` with Supabase Storage URL |
 | Annotations | `Highlight` on `ReadingSession` |
+
+---
+
+## 9. Community Models (F-016 MVP)
+
+### CommunityPost
+
+Plain-text post (`title`, `body`) authored by a signed-in user. Deleting a post cascades to its comments. Indexed newest-first for the feed.
+
+### CommunityComment
+
+Threaded comment on a post. `parentId` (nullable) points at the parent comment; null means top-level. **MVP tradeoff:** `parentId` uses `onDelete: Cascade`, so deleting a comment deletes its whole reply subtree — chosen over soft-delete placeholders for simplicity; swap to a soft-delete `deletedAt` if threads later need to survive mid-node deletes. All mutations verify ownership server-side (`createPost` / `createComment` / `deleteOwnPost` / `deleteOwnComment` in `app/community/actions.ts`); replies are validated to belong to the same post as their parent.
