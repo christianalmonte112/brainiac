@@ -13,6 +13,9 @@ export function NavHeader() {
           <Link href="/reader/vocabulary" className="hover:text-slate-900">
             Vocabulary
           </Link>
+          <Link href="/reader/games" className="hover:text-slate-900">
+            Games
+          </Link>
           <Link href="/reader/progress" className="hover:text-slate-900">
             Progress
           </Link>

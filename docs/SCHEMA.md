@@ -453,6 +453,20 @@ prisma.quizAttempt.aggregate({
 
 ---
 
+## 8. Games Models (Phase 4)
+
+### VocabularyReview (F-014)
+
+One row per vocabulary word the user has reviewed in the memory game. Leitner-ladder spaced repetition: `intervalDays` and `correctStreak` climb on correct answers (1 → 2 → 4 → 7 → 14 → 30 → 60 days); a miss resets to due-immediately. `vocabularyWordId` is unique — the row is upserted per word.
+
+### VisualGame / VisualGameItem / VisualGameAttempt (F-013)
+
+A `VisualGame` (MATCHING or SEQUENCING, via the `VisualGameType` enum) belongs to a `ReadingSession` and is generated from its `sourceText`. Each `VisualGameItem` stores client-safe display data in `itemData` (terms + shuffled descriptions, or shuffled steps) and the solution in `correctAnswer` as `{ selections: number[] }` — **server-only**: the generate route never returns it, and grading happens in the `submitVisualGameAttempt` server action. `VisualGameAttempt` records each graded play-through (`score` is a 0–1 fraction).
+
+### ListeningGame / ListeningSegment / ListeningAttempt (F-015)
+
+A `ListeningGame` belongs to a user and is built from lyrics the user pasted (no lyric search or licensing integration by design). Each `ListeningSegment` stores the segment's `lyricText`, `vocabularyAnnotations` (Json array of `{word, note}`), `blankedText` (with `____` markers), and `questions` — a Json answer key `{ blankAnswers, question: { prompt, options, correctIndex } }` that is stripped from API responses and used only by the `submitListeningAttempt` server action for grading. `ListeningAttempt` records each graded play-through.
+
 ## 9. Community Models (F-016 MVP)
 
 ### CommunityPost

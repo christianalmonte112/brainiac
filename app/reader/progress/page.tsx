@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { computeReadingStreak } from "@/lib/progress/streak";
 import { buildGrowthSeries, computeAverageWPM, type CompletedSessionStats } from "@/lib/progress/stats";
+import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
 import { TickerChart } from "./TickerChart";
 
 function StatCard({ label, value }: { label: string; value: string }) {
@@ -17,7 +18,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 export default async function ProgressPage() {
   const { userId } = await auth();
 
-  const [baseline, completedSessions, vocabularyWordsCount, user] = userId
+  const [baseline, completedSessions, vocabularyWordsCount, dueReviewCount, user] = userId
     ? await Promise.all([
         prisma.baselineAssessment.findUnique({ where: { userId } }),
         prisma.readingSession.findMany({
@@ -25,9 +26,10 @@ export default async function ProgressPage() {
           select: { wordCount: true, elapsedSeconds: true, completedAt: true },
         }),
         prisma.vocabularyWord.count({ where: { userId } }),
+        prisma.vocabularyWord.count({ where: dueVocabularyWordsWhere(userId) }),
         prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
       ])
-    : [null, [], 0, null];
+    : [null, [], 0, 0, null];
 
   // Falls back to UTC if the browser-detected timezone hasn't synced yet
   // (e.g. a user's very first page load, or JS-disabled) — same behavior
@@ -69,6 +71,22 @@ export default async function ProgressPage() {
         <StatCard label="Sessions completed" value={String(completedSessions.length)} />
         <StatCard label="Vocabulary words learned" value={String(vocabularyWordsCount)} />
       </div>
+
+      {/* Memory game entry point (F-014) — surfaces how many words are due for spaced-repetition review. */}
+      <Link
+        href="/reader/games/memory"
+        className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:bg-slate-50"
+      >
+        <div>
+          <p className="text-sm font-semibold text-slate-900">🧠 Memory game</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {dueReviewCount === 0
+              ? "All caught up — no words due for review."
+              : `${dueReviewCount} word${dueReviewCount === 1 ? "" : "s"} due for review.`}
+          </p>
+        </div>
+        <span className="text-sm font-medium text-slate-600">Practice →</span>
+      </Link>
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Baseline vs. current</h2>

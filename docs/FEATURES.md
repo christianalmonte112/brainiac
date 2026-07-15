@@ -25,9 +25,9 @@ For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXP
 | F-010 | Voice Reader (ElevenLabs) | 3 | ✅ Shipped |
 | F-011 | Multilingual Support (language selection + translated UI/assessment/TTS) | 3 | 🔲 Planned |
 | F-012 | Voice Summarization | 3 | ✅ Shipped |
-| F-013 | Visual Learning Games | 4 | 🔲 Planned |
-| F-014 | Memory Games | 4 | 🔲 Planned |
-| F-015 | Listening Games (Song Lyrics) | 4 | 🔲 Planned |
+| F-013 | Visual Learning Games | 4 | ✅ Shipped |
+| F-014 | Memory Games | 4 | ✅ Shipped |
+| F-015 | Listening Games (Song Lyrics) | 4 | ✅ Shipped |
 | F-016 | Community Platform | 4 | 🚧 In progress (MVP shipped) |
 | F-017 | Onboarding Baseline Assessment | 2 | ✅ Shipped |
 | F-018 | Image/Photo Upload (Claude Vision OCR) | 3 | ✅ Shipped |
@@ -471,7 +471,7 @@ Users record their own spoken summary of a reading session. AI evaluates the rec
 
 ## F-013: Visual Learning Games
 
-**Phase:** 4 · **Status:** 🔲 Planned
+**Phase:** 4 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -479,15 +479,15 @@ Interactive visual comprehension exercises tied to session content — matching,
 
 ### Acceptance Criteria
 
-- [ ] At least 2 game types available per session
-- [ ] Games generated from session text via Claude
-- [ ] Scores tracked and compared to baseline
+- [x] At least 2 game types available per session
+- [x] Games generated from session text via Claude
+- [x] Scores tracked and compared to baseline
 
 ---
 
 ## F-014: Memory Games
 
-**Phase:** 4 · **Status:** 🔲 Planned
+**Phase:** 4 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -495,15 +495,15 @@ Retention-focused recall games using content from the user's reading sessions. S
 
 ### Acceptance Criteria
 
-- [ ] Flashcard-style recall game from session vocabulary
-- [ ] Spaced repetition schedule based on performance
-- [ ] Progress visible on dashboard
+- [x] Flashcard-style recall game from session vocabulary
+- [x] Spaced repetition schedule based on performance
+- [x] Progress visible on dashboard
 
 ---
 
 ## F-015: Listening Games (Song Lyrics)
 
-**Phase:** 4 · **Status:** 🔲 Planned
+**Phase:** 4 · **Status:** ✅ Shipped
 
 ### Description
 
@@ -518,9 +518,9 @@ AI breaks down song lyrics into comprehension exercises. Users listen to audio, 
 
 ### Acceptance Criteria
 
-- [ ] Lyrics broken into annotated chunks by Claude
-- [ ] Audio sync with lyric highlighting
-- [ ] Comprehension questions generated per segment
+- [x] Lyrics broken into annotated chunks by Claude
+- [x] Audio sync with lyric highlighting
+- [x] Comprehension questions generated per segment
 
 ---
 
