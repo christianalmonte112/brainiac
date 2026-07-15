@@ -466,3 +466,13 @@ A `VisualGame` (MATCHING or SEQUENCING, via the `VisualGameType` enum) belongs t
 ### ListeningGame / ListeningSegment / ListeningAttempt (F-015)
 
 A `ListeningGame` belongs to a user and is built from lyrics the user pasted (no lyric search or licensing integration by design). Each `ListeningSegment` stores the segment's `lyricText`, `vocabularyAnnotations` (Json array of `{word, note}`), `blankedText` (with `____` markers), and `questions` — a Json answer key `{ blankAnswers, question: { prompt, options, correctIndex } }` that is stripped from API responses and used only by the `submitListeningAttempt` server action for grading. `ListeningAttempt` records each graded play-through.
+
+## 9. Community Models (F-016 MVP)
+
+### CommunityPost
+
+Plain-text post (`title`, `body`) authored by a signed-in user. Deleting a post cascades to its comments. Indexed newest-first for the feed.
+
+### CommunityComment
+
+Threaded comment on a post. `parentId` (nullable) points at the parent comment; null means top-level. **MVP tradeoff:** `parentId` uses `onDelete: Cascade`, so deleting a comment deletes its whole reply subtree — chosen over soft-delete placeholders for simplicity; swap to a soft-delete `deletedAt` if threads later need to survive mid-node deletes. All mutations verify ownership server-side (`createPost` / `createComment` / `deleteOwnPost` / `deleteOwnComment` in `app/community/actions.ts`); replies are validated to belong to the same post as their parent.

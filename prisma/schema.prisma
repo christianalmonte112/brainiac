@@ -53,6 +53,8 @@ model User {
   visualGameAttempts    VisualGameAttempt[]
   listeningGames        ListeningGame[]
   listeningAttempts     ListeningAttempt[]
+  communityPosts        CommunityPost[]
+  communityComments     CommunityComment[]
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
@@ -383,4 +385,41 @@ model ListeningAttempt {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([listeningGameId, userId])
+}
+
+/// A community post (F-016 MVP) — plain text, authored by a signed-in user.
+model CommunityPost {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments CommunityComment[]
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
+}
+
+/// A threaded comment on a community post (F-016 MVP). Nesting is via
+/// parentId (null = top-level). Deleting a comment cascades to its replies
+/// — an explicit MVP tradeoff, documented in SCHEMA.md; a soft-delete
+/// placeholder can replace it if threads need to survive mid-node deletes.
+model CommunityComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  parentId  String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  post    CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  CommunityComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies CommunityComment[] @relation("CommentReplies")
+
+  @@index([postId, createdAt])
+  @@index([userId])
 }

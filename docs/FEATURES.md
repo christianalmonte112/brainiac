@@ -28,7 +28,7 @@ For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXP
 | F-013 | Visual Learning Games | 4 | ✅ Shipped |
 | F-014 | Memory Games | 4 | ✅ Shipped |
 | F-015 | Listening Games (Song Lyrics) | 4 | ✅ Shipped |
-| F-016 | Community Platform | 4 | 🔲 Planned |
+| F-016 | Community Platform | 4 | 🚧 In progress (MVP shipped) |
 | F-017 | Onboarding Baseline Assessment | 2 | ✅ Shipped |
 | F-018 | Image/Photo Upload (Claude Vision OCR) | 3 | ✅ Shipped |
 | F-019 | Admin Analytics Dashboard | 3 | ✅ Shipped |
@@ -526,7 +526,7 @@ AI breaks down song lyrics into comprehension exercises. Users listen to audio, 
 
 ## F-016: Community Platform
 
-**Phase:** 4 · **Status:** 🔲 Planned
+**Phase:** 4 · **Status:** 🚧 In progress — MVP shipped (text posts + threaded comments + delete-own); votes, recommendations feed, and moderation still planned
 
 ### Description
 
