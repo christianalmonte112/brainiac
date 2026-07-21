@@ -32,7 +32,7 @@ export default async function ReaderLayout({ children }: { children: React.React
   return (
     <div className="flex h-screen flex-col">
       <TimezoneSync currentTimezone={user?.timezone ?? null} />
-      <NavHeader />
+      <NavHeader sessions={sessions} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar sessions={sessions} />
         <main className="flex-1 overflow-y-auto">{children}</main>
