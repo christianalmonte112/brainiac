@@ -19,6 +19,9 @@ import {
   computeVocabularyMastery,
 } from "@/lib/progress/learningInsights";
 import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
+import { syncEarnedBadges } from "@/lib/badges/sync";
+import { BADGE_DEFINITIONS } from "@/lib/badges/definitions";
+import { BadgeShelf } from "./BadgeShelf";
 import { TickerChart } from "./TickerChart";
 
 const RECENT_SESSION_LIMIT = 10;
@@ -164,6 +167,25 @@ export default async function ProgressPage() {
   const frictionPoints = buildFrictionPoints(weakAreas, recentHighlights);
   const inferenceAccuracy = accuracyForQuestionType(questionResults, "inference");
 
+  // F-021: re-evaluate and persist any newly-earned badges on every load —
+  // see lib/badges/sync.ts for why this is "sync on read" rather than
+  // event-driven hooks. completedSessions.length (not totalSessions, which
+  // also counts in-progress ones) is the right denominator for the
+  // sessions_* badges.
+  let earnedBadgeKeys = new Set<string>();
+  if (userId) {
+    await syncEarnedBadges(userId, {
+      currentStreak: streak,
+      completedSessions: completedSessions.length,
+      currentWPM,
+      baselineWPM: baseline.readingSpeedWPM,
+      avgQuizScorePercent: avgQuizScore,
+      masteredVocabularyCount: vocabularyMastery.masteredCount,
+    });
+    const earnedBadges = await prisma.badge.findMany({ where: { userId }, select: { key: true } });
+    earnedBadgeKeys = new Set(earnedBadges.map((b) => b.key));
+  }
+
   const lowScoreSessions = recentSessions
     .map((session) => {
       const flatAttempts = session.quizzes.flatMap((q) => q.attempts);
@@ -227,6 +249,15 @@ export default async function ProgressPage() {
           label="Avg quiz score"
           value={avgQuizScore !== null ? `${avgQuizScore}%` : "—"}
         />
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+          Badges ({earnedBadgeKeys.size}/{BADGE_DEFINITIONS.length})
+        </h2>
+        <div className="mt-3">
+          <BadgeShelf earnedKeys={earnedBadgeKeys} />
+        </div>
       </div>
 
       {totalSessions === 0 ? (
