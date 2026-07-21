@@ -52,6 +52,7 @@ model User {
   vocabularyReviews     VocabularyReview[]
   visualGameAttempts    VisualGameAttempt[]
   listeningGames        ListeningGame[]
+  badges                Badge[]
   listeningAttempts     ListeningAttempt[]
   communityPosts        CommunityPost[]
   communityComments     CommunityComment[]
@@ -422,4 +423,22 @@ model CommunityComment {
 
   @@index([postId, createdAt])
   @@index([userId])
+}
+
+/// F-021 — a permanently-earned achievement (once earned, always kept, even
+/// if the underlying stat that triggered it later changes — e.g. a 7-day
+/// streak badge stays earned even after the streak later resets to 0).
+/// `key` is a stable identifier from lib/badges/definitions.ts, not a
+/// display string, so badge copy can be edited freely without touching
+/// earned records.
+model Badge {
+  id       String   @id @default(cuid())
+  userId   String
+  key      String
+  earnedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId, earnedAt(sort: Desc)])
 }
