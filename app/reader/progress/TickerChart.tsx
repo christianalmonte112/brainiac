@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { GrowthPoint } from "@/lib/progress/stats";
 import { computeDelta, filterSeriesByRange, summarizeSeries, type RangeDays } from "@/lib/progress/range";
 
@@ -9,7 +9,16 @@ interface TickerChartProps {
   baselineWPM: number;
 }
 
-const WIDTH = 640;
+// Two coordinate-space presets rather than one fixed viewBox scaled down by
+// CSS: SVG text scales with the viewBox, so a 640-unit canvas squished into
+// a ~350px phone renders 10-11px labels at roughly HALF that (~5-6px,
+// confirmed by direct calculation) — illegible. Giving mobile its own,
+// narrower native canvas keeps the render scale close to 1:1 on a real
+// phone, so the same font sizes stay legible instead of needing to be
+// inflated (which would look oversized on desktop, where the full 640px
+// canvas already renders every label at its true intended size).
+const DESKTOP_WIDTH = 640;
+const MOBILE_WIDTH = 320;
 const HEIGHT = 240;
 const PAD_X = 8;
 const PAD_TOP = 12;
@@ -21,6 +30,18 @@ const RANGES: { label: string; days: RangeDays }[] = [
   { label: "3M", days: 90 },
   { label: "ALL", days: null },
 ];
+
+function useNarrowViewport(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia("(max-width: 639px)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(max-width: 639px)").matches,
+    () => false,
+  );
+}
 
 function formatDate(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-US", {
@@ -48,6 +69,11 @@ export function TickerChart({ points, baselineWPM }: TickerChartProps) {
   const [range, setRange] = useState<RangeDays>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Defaults to the desktop canvas on the server; client snapshot uses
+  // matchMedia so mobile gets the narrower native canvas without squished SVG text.
+  const isNarrow = useNarrowViewport();
+  const WIDTH = isNarrow ? MOBILE_WIDTH : DESKTOP_WIDTH;
 
   const visible = useMemo(() => filterSeriesByRange(points, range), [points, range]);
   const summary = summarizeSeries(visible);

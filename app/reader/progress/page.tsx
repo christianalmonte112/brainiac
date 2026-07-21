@@ -220,7 +220,7 @@ export default async function ProgressPage() {
         </ul>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Reading streak" value={`${streak} day${streak === 1 ? "" : "s"}`} />
         <StatCard label="Total sessions" value={String(totalSessions)} />
         <StatCard
