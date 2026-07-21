@@ -22,6 +22,7 @@ import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
 import { syncEarnedBadges } from "@/lib/badges/sync";
 import { BADGE_DEFINITIONS } from "@/lib/badges/definitions";
 import { BadgeShelf } from "./BadgeShelf";
+import { ShareCard } from "./ShareCard";
 import { TickerChart } from "./TickerChart";
 
 const RECENT_SESSION_LIMIT = 10;
@@ -257,6 +258,19 @@ export default async function ProgressPage() {
         </h2>
         <div className="mt-3">
           <BadgeShelf earnedKeys={earnedBadgeKeys} />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Share your progress</h2>
+        <div className="mt-3 rounded-xl border border-slate-200 p-4">
+          <ShareCard
+            currentWPM={currentWPM}
+            baselineWPM={baseline.readingSpeedWPM}
+            streak={streak}
+            avgQuizScorePercent={avgQuizScore}
+            earnedBadgeKeys={[...earnedBadgeKeys]}
+          />
         </div>
       </div>
 
