@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { countWords } from "@/lib/text/word-count";
 import { createReadingSessionSchema, submitChunkSummarySchema } from "@/lib/reading-sessions/schema";
 import { scoreChunkSummary } from "@/lib/prompts/scoreSummary";
+import { canCreateSession, FREE_SESSION_LIMIT } from "@/lib/subscription/limits";
+import { isPremiumStatus } from "@/lib/subscription/status";
 
 export interface CreateSessionActionState {
   error?: string;
@@ -29,6 +31,18 @@ export async function createReadingSession(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const [subscription, activeSessionCount] = await Promise.all([
+    prisma.subscription.findUnique({ where: { userId }, select: { status: true } }),
+    prisma.readingSession.count({ where: { userId, status: { not: "ARCHIVED" } } }),
+  ]);
+
+  const isPremium = subscription ? isPremiumStatus(subscription.status) : false;
+  if (!canCreateSession(isPremium, activeSessionCount)) {
+    return {
+      error: `Free accounts are limited to ${FREE_SESSION_LIMIT} documents. Upgrade to Premium for unlimited sessions.`,
+    };
   }
 
   const session = await prisma.readingSession.create({

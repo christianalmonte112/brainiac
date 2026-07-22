@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   // Next.js metadata icon routes have no file extension — must bypass auth
   "/icon",
   "/apple-icon",
+  // Stripe sends unsigned POSTs — verified inside the route handler
+  "/api/stripe/webhook",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

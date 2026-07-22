@@ -6,7 +6,7 @@ interface BrainLogoProps {
   size?: number;
 }
 
-/** Canonical Brainiac mark — framed brain with internal fold lines. */
+/** Canonical Brainiac mark — cropped PNG, black rounded square, no outer white padding. */
 export function BrainLogo({ className, size = 28 }: BrainLogoProps) {
   return (
     <Image
