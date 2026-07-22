@@ -8,6 +8,7 @@ import { countWords } from "@/lib/text/word-count";
 import { createReadingSessionSchema, submitChunkSummarySchema } from "@/lib/reading-sessions/schema";
 import { scoreChunkSummary } from "@/lib/prompts/scoreSummary";
 import { canCreateSession, FREE_SESSION_LIMIT } from "@/lib/subscription/limits";
+import { getSubscriptionForUser } from "@/lib/subscription/getSubscription";
 import { isPremiumStatus } from "@/lib/subscription/status";
 
 export interface CreateSessionActionState {
@@ -34,7 +35,7 @@ export async function createReadingSession(
   }
 
   const [subscription, activeSessionCount] = await Promise.all([
-    prisma.subscription.findUnique({ where: { userId }, select: { status: true } }),
+    getSubscriptionForUser(userId),
     prisma.readingSession.count({ where: { userId, status: { not: "ARCHIVED" } } }),
   ]);
 

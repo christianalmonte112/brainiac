@@ -25,6 +25,7 @@ import { BadgeShelf } from "./BadgeShelf";
 import { ShareCard } from "./ShareCard";
 import { BillingPanel } from "./BillingPanel";
 import { TickerChart } from "./TickerChart";
+import { getSubscriptionForUser } from "@/lib/subscription/getSubscription";
 import { isPremiumStatus } from "@/lib/subscription/status";
 
 const RECENT_SESSION_LIMIT = 10;
@@ -61,7 +62,6 @@ export default async function ProgressPage() {
     gradedAttempts,
     inProgressSessions,
     recentHighlights,
-    subscription,
   ] = userId
     ? await Promise.all([
         prisma.baselineAssessment.findUnique({ where: { userId } }),
@@ -130,12 +130,10 @@ export default async function ProgressPage() {
           take: 5,
           select: { selectedText: true },
         }),
-        prisma.subscription.findUnique({
-          where: { userId },
-          select: { status: true, currentPeriodEnd: true },
-        }),
       ])
-    : [null, [], [], 0, null, 0, [], [], [], [], [], null];
+    : [null, [], [], 0, null, 0, [], [], [], [], []];
+
+  const subscription = userId ? await getSubscriptionForUser(userId) : null;
 
   const timezone = user?.timezone ?? "UTC";
 
