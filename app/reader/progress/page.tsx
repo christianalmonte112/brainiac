@@ -23,7 +23,9 @@ import { syncEarnedBadges } from "@/lib/badges/sync";
 import { BADGE_DEFINITIONS } from "@/lib/badges/definitions";
 import { BadgeShelf } from "./BadgeShelf";
 import { ShareCard } from "./ShareCard";
+import { BillingPanel } from "./BillingPanel";
 import { TickerChart } from "./TickerChart";
+import { isPremiumStatus } from "@/lib/subscription/status";
 
 const RECENT_SESSION_LIMIT = 10;
 const THIRTY_DAYS_AGO = new Date(Date.now() - 30 * 86_400_000);
@@ -59,6 +61,7 @@ export default async function ProgressPage() {
     gradedAttempts,
     inProgressSessions,
     recentHighlights,
+    subscription,
   ] = userId
     ? await Promise.all([
         prisma.baselineAssessment.findUnique({ where: { userId } }),
@@ -127,8 +130,12 @@ export default async function ProgressPage() {
           take: 5,
           select: { selectedText: true },
         }),
+        prisma.subscription.findUnique({
+          where: { userId },
+          select: { status: true, currentPeriodEnd: true },
+        }),
       ])
-    : [null, [], [], 0, null, 0, [], [], [], [], []];
+    : [null, [], [], 0, null, 0, [], [], [], [], [], null];
 
   const timezone = user?.timezone ?? "UTC";
 
@@ -222,6 +229,15 @@ export default async function ProgressPage() {
         : "All caught up — no words due for review."
       : `${dueReviewCount} word${dueReviewCount === 1 ? "" : "s"} due · ${vocabularyMastery.masteryPercent ?? 0}% mastered overall`;
 
+  const isPremium = subscription ? isPremiumStatus(subscription.status) : false;
+  const renewsAt = subscription?.currentPeriodEnd
+    ? subscription.currentPeriodEnd.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-10">
       <div>
@@ -250,6 +266,17 @@ export default async function ProgressPage() {
           label="Avg quiz score"
           value={avgQuizScore !== null ? `${avgQuizScore}%` : "—"}
         />
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Subscription</h2>
+        <div className="mt-3">
+          <BillingPanel
+            isPremium={isPremium}
+            statusLabel={subscription?.status ?? "NONE"}
+            renewsAt={renewsAt}
+          />
+        </div>
       </div>
 
       <div>

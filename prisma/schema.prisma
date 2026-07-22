@@ -56,6 +56,33 @@ model User {
   listeningAttempts     ListeningAttempt[]
   communityPosts        CommunityPost[]
   communityComments     CommunityComment[]
+  subscription          Subscription?
+}
+
+/// Stripe subscription state for a user. Created lazily on first checkout;
+/// kept in sync via /api/stripe/webhook.
+enum SubscriptionStatus {
+  NONE
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  UNPAID
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(NONE)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Permanent baseline scores captured during onboarding (F-017).
