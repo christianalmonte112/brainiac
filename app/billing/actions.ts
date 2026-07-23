@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe/client";
 import { getAppUrl, getPremiumPriceId } from "@/lib/stripe/config";
+import { getSubscriptionForUser } from "@/lib/subscription/getSubscription";
 import { isPremiumStatus } from "@/lib/subscription/status";
 
 export interface BillingActionResult {
@@ -47,7 +48,7 @@ export async function createCheckoutSession(): Promise<BillingActionResult> {
     redirect("/sign-in");
   }
 
-  const subscription = await prisma.subscription.findUnique({ where: { userId } });
+  const subscription = await getSubscriptionForUser(userId);
   if (subscription && isPremiumStatus(subscription.status)) {
     return { error: "You already have an active Premium subscription." };
   }
