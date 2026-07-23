@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { submitChunkSummary } from "../actions";
 import { extractCandidateKeywords } from "@/lib/reading-sessions/keywords";
 import { ClickableParagraph } from "./ClickableParagraph";
@@ -16,6 +16,8 @@ interface ChunkBodyProps {
   onWordClick: (word: string) => void;
   /** Called when the user selects 3+ words and clicks "Ask Tutor". */
   onHighlight?: (selectedText: string, paragraphText: string) => void;
+  onStageChange?: (stage: "reading" | "summarizing" | "scored") => void;
+  getChunkSeconds?: () => number;
   /** False during a post-completion re-read, where progress is already saved and shouldn't be overwritten. */
   persist?: boolean;
 }
@@ -61,6 +63,8 @@ export function ChunkBody({
   onSubmitted,
   onWordClick,
   onHighlight,
+  onStageChange,
+  getChunkSeconds,
   persist = true,
 }: ChunkBodyProps) {
   const safeChunkText = chunkText ?? "";
@@ -71,11 +75,10 @@ export function ChunkBody({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [scoringResult, setScoringResult] = useState<ScoringResult | null>(null);
-  const mountedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
-    mountedAtRef.current = Date.now();
-  }, []);
+    onStageChange?.(stage);
+  }, [onStageChange, stage]);
 
   const candidateKeywords = useMemo(() => extractCandidateKeywords(safeChunkText), [safeChunkText]);
   const isLastChunk = chunkIndex === totalChunks - 1;
@@ -104,8 +107,7 @@ export function ChunkBody({
   }
 
   async function runSummarySubmission(summary: string): Promise<void> {
-    const chunkSeconds =
-      mountedAtRef.current !== null ? Math.round((Date.now() - mountedAtRef.current) / 1000) : 0;
+    const chunkSeconds = getChunkSeconds?.() ?? 0;
 
     try {
       const result = await submitChunkSummary({
@@ -160,8 +162,7 @@ export function ChunkBody({
 
     startTransition(async () => {
       try {
-        const chunkSeconds =
-          mountedAtRef.current !== null ? Math.round((Date.now() - mountedAtRef.current) / 1000) : 0;
+        const chunkSeconds = getChunkSeconds?.() ?? 0;
 
         const result = await submitChunkSummary({
           sessionId,

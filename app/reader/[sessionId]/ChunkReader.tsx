@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useActiveReadingTimer } from "@/lib/reading-sessions/useActiveReadingTimer";
 import { ChunkBody } from "./ChunkBody";
 import { ChunkTimer } from "./ChunkTimer";
 import { VocabularyPanel } from "./VocabularyPanel";
@@ -72,6 +73,15 @@ export function ChunkReader({
   const [summaryContent, setSummaryContent] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [readingStage, setReadingStage] = useState<"reading" | "summarizing" | "scored">("reading");
+
+  const safeChunkIndex = Math.min(Math.max(chunkIndex, 0), totalChunks - 1);
+  const timerRunning = !completed && readingStage === "reading";
+  const { activeSeconds, getActiveSeconds, reset: resetReadingTimer } = useActiveReadingTimer(timerRunning);
+
+  useEffect(() => {
+    resetReadingTimer();
+  }, [safeChunkIndex, resetReadingTimer]);
 
   async function handleStartQuiz() {
     setIsGeneratingQuiz(true);
@@ -174,7 +184,6 @@ export function ChunkReader({
     );
   }
 
-  const safeChunkIndex = Math.min(Math.max(chunkIndex, 0), totalChunks - 1);
   const progressPercent = Math.round(((safeChunkIndex + 1) / totalChunks) * 100);
 
   function handleSubmitted(completed: boolean) {
@@ -208,7 +217,7 @@ export function ChunkReader({
             <span>
               Section {safeChunkIndex + 1} of {totalChunks}
             </span>
-            <ChunkTimer key={safeChunkIndex} />
+            <ChunkTimer activeSeconds={activeSeconds} />
           </div>
         </div>
 
@@ -221,6 +230,8 @@ export function ChunkReader({
           onSubmitted={handleSubmitted}
           onWordClick={handleWordClick}
           onHighlight={handleHighlight}
+          onStageChange={setReadingStage}
+          getChunkSeconds={getActiveSeconds}
           persist={!restarted}
         />
 
