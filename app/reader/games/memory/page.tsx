@@ -53,7 +53,7 @@ export default async function MemoryGamePage() {
           schedule accurate.
         </p>
       </div>
-      <MemoryGame cards={cards} />
+      <MemoryGame key={cards.map((card) => card.id).join("-")} cards={cards} />
     </div>
   );
 }
