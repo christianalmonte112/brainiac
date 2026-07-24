@@ -135,7 +135,8 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       });
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? `HTTP ${res.status}`);
       }
 
       const blob = await res.blob();
@@ -149,7 +150,11 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
       }
-      setError("Could not generate audio for this section. Please try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not generate audio for this section. Please try again.",
+      );
     } finally {
       if (generateAbortRef.current === controller) {
         generateAbortRef.current = null;
