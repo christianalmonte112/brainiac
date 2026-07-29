@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/apple-icon",
   // Stripe sends unsigned POSTs — verified inside the route handler
   "/api/stripe/webhook",
+  // Clerk sends unsigned POSTs — verified inside the route handler
+  "/api/clerk/webhook",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
