@@ -88,7 +88,17 @@ STRIPE_PRICE_ID_PREMIUM=price_...
 
 # Optional — used for Stripe redirect URLs (defaults to VERCEL_URL or localhost)
 # NEXT_PUBLIC_APP_URL=https://brainiac-inky.vercel.app
+
+# Clerk webhook (syncs a User row the moment someone signs up)
+CLERK_WEBHOOK_SECRET=whsec_...
 ```
+
+**Clerk webhook setup — a one-time manual step in your own Clerk Dashboard,
+same pattern as Stripe's webhook, and can't be done from inside this repo:**
+1. In the Clerk Dashboard, go to **Webhooks** and add an endpoint pointing at `<your deployed URL>/api/clerk/webhook`.
+2. Subscribe it to at least the `user.created` and `user.updated` events.
+3. Copy its signing secret into `CLERK_WEBHOOK_SECRET`.
+4. For local development, Clerk's Dashboard can send test events directly to a public URL (e.g. via `ngrok` or a Vercel preview deployment) — there's no local CLI tunnel for this one the way `stripe listen` works for Stripe.
 
 ### 3. Database setup
 
