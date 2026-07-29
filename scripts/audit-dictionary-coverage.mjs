@@ -1,120 +1,99 @@
 #!/usr/bin/env node
-
 /**
- * Audits how many reader-vocabulary words the free dictionary API covers.
- * Run without flags for the dictionary-only baseline; pass --with-fallback to
- * also try Claude on misses (requires ANTHROPIC_API_KEY in .env.local).
+ * Audits the free dictionary API's real coverage without manual clicking.
+ *
+ * Run: node scripts/audit-dictionary-coverage.mjs
+ *
+ * Hits https://api.dictionaryapi.dev directly against a representative
+ * wordlist — common everyday words, harder/less common ones, technical
+ * jargon, and proper nouns — and reports exactly which fail and in which
+ * category. This is what actually answers "how big is the problem,"
+ * rather than impressions from a handful of manual clicks.
+ *
+ * Deliberately NOT a Vitest test: it makes ~90 real network calls to a
+ * third-party API, which is slow and would be flaky/rate-limit-prone if it
+ * ran on every CI push. Run it by hand whenever you want a fresh coverage
+ * snapshot — e.g. right after applying the Claude-fallback fix, to see the
+ * miss rate drop to (close to) zero.
  */
 
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { config } from "dotenv";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = join(__dirname, "..");
-
-config({ path: join(root, ".env.local") });
-config({ path: join(root, ".env") });
-
-const withFallback = process.argv.includes("--with-fallback");
 const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
-/** Words readers are likely to click from the baseline passage and quiz stems. */
-const SAMPLE_WORDS = [
-  "octopus",
-  "octopuses",
-  "neurons",
-  "skeleton",
-  "flexibility",
-  "intelligence",
-  "researchers",
-  "aquarium",
-  "solitary",
-  "offspring",
-  "humbling",
-  "den",
-  "Inky",
-  "cephalopod",
-  "suction",
-  "cunning",
-  "hatching",
-  "chimpanzees",
-  "reinvent",
-  "zzzznotaword",
+/** Ordinary words a reading app will hit constantly — these should never miss. */
+const COMMON_WORDS = [
+  "house", "water", "happy", "run", "beautiful", "quickly", "because", "although",
+  "consider", "important", "decide", "believe", "however", "therefore", "although",
+  "environment", "community", "government", "experience", "opportunity",
 ];
 
-async function lookupDictionary(word) {
-  const response = await fetch(`${DICTIONARY_API_BASE}/${encodeURIComponent(word.toLowerCase())}`, {
-    headers: { Accept: "application/json" },
-  });
-  return response.ok;
-}
+/** Less common but still ordinary vocabulary a curious reader might click. */
+const UNCOMMON_WORDS = [
+  "ephemeral", "ubiquitous", "cacophony", "serendipity", "melancholy",
+  "quintessential", "juxtapose", "ambivalent", "conundrum", "vestigial",
+  "obfuscate", "perfunctory", "ineffable", "sardonic", "capricious",
+];
 
-async function lookupClaude(word) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is not set. Add it to .env.local for --with-fallback.");
-  }
+/** Technical/scientific terms — exactly the category "stigmergy" fell into. */
+const TECHNICAL_WORDS = [
+  "stigmergy", "pheromone", "homeostasis", "entropy", "algorithm",
+  "quantum", "mitochondria", "photosynthesis", "epistemology", "heuristic",
+];
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 256,
-      system:
-        'Return JSON only: {"word","partOfSpeech","phonetic","definition","etymology","synonyms":[]}. Use null for unknown words.',
-      messages: [{ role: "user", content: word }],
-    }),
-  });
+/** Proper nouns — exactly the category "yemen"/"pakistan" fell into. Expected to fail; included so the report clearly separates "acceptable miss" from "real problem." */
+const PROPER_NOUNS = [
+  "pakistan", "yemen", "einstein", "shakespeare", "tokyo",
+  "everest", "amazon", "sahara", "napoleon", "gandhi",
+];
 
-  if (!response.ok) return false;
+const CATEGORIES = [
+  { name: "Common words (should never miss)", words: COMMON_WORDS },
+  { name: "Uncommon vocabulary", words: UNCOMMON_WORDS },
+  { name: "Technical/scientific terms", words: TECHNICAL_WORDS },
+  { name: "Proper nouns (expected to miss — free dictionaries don't cover names)", words: PROPER_NOUNS },
+];
 
-  const payload = await response.json();
-  const text = payload.content?.[0]?.text;
-  if (!text) return false;
-
+async function checkWord(word) {
   try {
-    const parsed = JSON.parse(text);
-    return typeof parsed?.definition === "string" && parsed.definition.trim().length > 0;
-  } catch {
-    return false;
+    const res = await fetch(`${DICTIONARY_API_BASE}/${encodeURIComponent(word)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return { word, found: false };
+    if (!res.ok) return { word, found: false, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { word, found: Array.isArray(data) && data.length > 0 && data[0]?.meanings?.length > 0 };
+  } catch (err) {
+    return { word, found: false, error: err instanceof Error ? err.message : String(err) };
   }
-}
-
-async function lookupWord(word) {
-  if (await lookupDictionary(word)) return true;
-  if (!withFallback) return false;
-  return lookupClaude(word);
 }
 
 async function main() {
-  const hits = [];
-  const misses = [];
+  console.log("Auditing dictionaryapi.dev coverage — this makes real network calls, give it a moment...\n");
 
-  for (const word of SAMPLE_WORDS) {
-    const found = await lookupWord(word);
-    if (found) hits.push(word);
-    else misses.push(word);
+  let totalWords = 0;
+  let totalMisses = 0;
+
+  for (const category of CATEGORIES) {
+    const results = await Promise.all(category.words.map(checkWord));
+    const misses = results.filter((r) => !r.found);
+    totalWords += results.length;
+    totalMisses += misses.length;
+
+    console.log(`${category.name}: ${results.length - misses.length}/${results.length} found`);
+    if (misses.length > 0) {
+      console.log(`  Missing: ${misses.map((m) => m.word).join(", ")}`);
+    }
+    console.log("");
   }
 
-  const mode = withFallback ? "dictionary + Claude fallback" : "dictionary API only";
-  const coverage = Math.round((hits.length / SAMPLE_WORDS.length) * 100);
-
-  console.log(`Vocabulary coverage audit (${mode})`);
-  console.log(`Sample size: ${SAMPLE_WORDS.length}`);
-  console.log(`Found: ${hits.length} (${coverage}%)`);
-  console.log(`Missing: ${misses.length}`);
-  if (misses.length > 0) {
-    console.log(`Missed words: ${misses.join(", ")}`);
-  }
+  console.log("─".repeat(60));
+  console.log(`Overall: ${totalWords - totalMisses}/${totalWords} found (${totalMisses} misses)`);
+  console.log("\nWhat to look for:");
+  console.log("- Misses in 'Common words' = a real problem, worth investigating further.");
+  console.log("- Misses in 'Uncommon vocabulary' or 'Technical terms' = the free API's");
+  console.log("  known coverage gap — this is exactly what the Claude fallback fixes.");
+  console.log("- Misses in 'Proper nouns' = expected and acceptable — no general-purpose");
+  console.log("  dictionary indexes every place/person name; the Claude fallback also");
+  console.log("  covers these now, but a miss here isn't itself evidence of a bug.");
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main();

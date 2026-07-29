@@ -1,43 +1,40 @@
-import { getAnthropic } from "@/lib/ai/client";
-import type { WordLookupResult } from "@/lib/vocabulary/dictionary";
+import { getAnthropic } from "../ai/client";
+import type { WordLookupResult } from "../vocabulary/dictionary";
 
-export const VOCABULARY_LOOKUP_MODEL = "claude-sonnet-4-5";
+export const VOCABULARY_FALLBACK_MODEL = "claude-sonnet-4-5";
 
-const SYSTEM_PROMPT = `You are a concise English dictionary for adult readers building vocabulary while reading.
-
-Given a single English word, return a helpful dictionary-style entry. Use plain language. If the word is not a real English word, respond with null.
+/**
+ * Fallback for the vocabulary mapper (F-004) when the free dictionary API
+ * (dictionaryapi.dev) has no entry for a word. That's a crowd-sourced,
+ * English-only source with real coverage gaps — proper nouns (country
+ * names, people), technical/scientific jargon, and slang are the most
+ * common misses, confirmed directly: "stigmergy", "yemen", and "pakistan"
+ * all returned nothing from it during testing, even though every one of
+ * them has a perfectly real, definable meaning. Rather than show
+ * "no entry found" for a word that usually IS real, ask Claude directly —
+ * this only runs on the free API's misses, not every lookup, so it stays
+ * cheap in aggregate.
+ */
+const SYSTEM_PROMPT = `You are a dictionary. Given a single word or short proper noun, respond with a concise, accurate entry — including for names of countries, people, places, and technical/scientific terms the word might be, not just common dictionary words.
 
 Respond ONLY as a JSON object with this exact shape:
-{"word":"<word>","partOfSpeech":"<noun|verb|adjective|etc or null>","phonetic":"<IPA or simple pronunciation or null>","definition":"<one clear sentence>","etymology":"<brief origin or null>","synonyms":["<up to 8 short synonyms>"]}
+{"found": true, "partOfSpeech": "<noun/verb/proper noun/etc, or null>", "definition": "<one clear, factual sentence>", "synonyms": [<up to 5 real synonyms, or empty array if none genuinely apply — e.g. proper nouns usually have none>]}
 
-No markdown, no extra keys, no explanation outside the JSON.`;
+If the input is genuinely not a real word, name, or term in any domain (pure gibberish, a typo with no sensible reading), respond with exactly:
+{"found": false}
 
-function normalizeLookup(parsed: unknown, requestedWord: string): WordLookupResult | null {
-  if (!parsed || typeof parsed !== "object") return null;
+No markdown, no commentary, no text outside the JSON object.`;
 
-  const record = parsed as Record<string, unknown>;
-  const definition = typeof record.definition === "string" ? record.definition.trim() : "";
-  if (!definition) return null;
-
-  const synonyms = Array.isArray(record.synonyms)
-    ? record.synonyms.filter((value): value is string => typeof value === "string" && value.trim().length > 0).slice(0, 8)
-    : [];
-
-  return {
-    word: typeof record.word === "string" && record.word.trim().length > 0 ? record.word.trim() : requestedWord,
-    partOfSpeech: typeof record.partOfSpeech === "string" ? record.partOfSpeech.trim() || null : null,
-    phonetic: typeof record.phonetic === "string" ? record.phonetic.trim() || null : null,
-    definition,
-    etymology: typeof record.etymology === "string" ? record.etymology.trim() || null : null,
-    synonyms,
-  };
-}
-
-/** Claude fallback when dictionaryapi.dev has no entry for a clicked word. */
-export async function lookupWordWithClaude(word: string): Promise<WordLookupResult | null> {
+/**
+ * Looks up `word` via Claude. Returns null both when Claude reports the
+ * word doesn't exist and when its response can't be parsed — the caller
+ * treats both the same way (report not-found), so they aren't
+ * distinguished further here.
+ */
+export async function lookupWordWithClaudeFallback(word: string): Promise<WordLookupResult | null> {
   const message = await getAnthropic().messages.create({
-    model: VOCABULARY_LOOKUP_MODEL,
-    max_tokens: 512,
+    model: VOCABULARY_FALLBACK_MODEL,
+    max_tokens: 250,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: word }],
   });
@@ -46,9 +43,24 @@ export async function lookupWordWithClaude(word: string): Promise<WordLookupResu
   if (!raw || raw.type !== "text") return null;
 
   try {
-    const parsed = JSON.parse(raw.text) as unknown;
-    if (parsed === null) return null;
-    return normalizeLookup(parsed, word);
+    const cleaned = raw.text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned) as {
+      found?: boolean;
+      partOfSpeech?: string | null;
+      definition?: string;
+      synonyms?: string[];
+    };
+
+    if (!parsed.found || !parsed.definition) return null;
+
+    return {
+      word,
+      partOfSpeech: parsed.partOfSpeech ?? null,
+      phonetic: null, // Claude doesn't reliably produce real IPA notation — leaving this null is more honest than a guessed one.
+      definition: parsed.definition,
+      etymology: null, // Same reasoning as the free API: best-effort only, and not worth an extra round-trip to guess at here.
+      synonyms: Array.isArray(parsed.synonyms) ? parsed.synonyms.slice(0, 8) : [],
+    };
   } catch {
     return null;
   }
