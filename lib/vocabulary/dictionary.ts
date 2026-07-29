@@ -1,8 +1,7 @@
 /**
  * Free, keyless dictionary lookup for the vocabulary mapper (F-004).
- * Phase 2 is intentionally Claude-free (the Anthropic integration is Phase 3
- * work) so word definitions come from https://dictionaryapi.dev instead.
- * Etymology is best-effort: most entries from this API don't include one.
+ * When this API has no entry, app/vocabulary/actions.ts falls back to Claude
+ * via lib/vocabulary/lookup.ts.
  */
 const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
