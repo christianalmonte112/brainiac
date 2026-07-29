@@ -1,7 +1,16 @@
+import { lookupWordWithClaudeFallback } from "../prompts/vocabularyLookup";
+
 /**
- * Free, keyless dictionary lookup for the vocabulary mapper (F-004).
- * When this API has no entry, app/vocabulary/actions.ts falls back to Claude
- * via lib/vocabulary/lookup.ts.
+ * Dictionary lookup for the vocabulary mapper (F-004).
+ *
+ * Primary source: the free, keyless dictionaryapi.dev. Fast and good
+ * coverage for common English words, with best-effort etymology (most
+ * entries don't include one).
+ *
+ * Fallback: when the free API has no entry, lookupWord() asks Claude
+ * instead of just reporting "not found" — see
+ * lib/prompts/vocabularyLookup.ts for exactly why this matters (real
+ * words the free source is missing, confirmed by live testing).
  */
 const DICTIONARY_API_BASE = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
@@ -39,8 +48,8 @@ export interface WordLookupResult {
 
 const MAX_SYNONYMS = 8;
 
-/** Looks up `word` (already lowercased/sanitized by the caller). Returns null if the dictionary has no entry. */
-export async function lookupWord(word: string): Promise<WordLookupResult | null> {
+/** The free-API lookup alone, with no fallback — exported for the coverage-audit script (scripts/audit-dictionary-coverage.mjs) to measure raw miss rate. */
+export async function lookupFreeApiWord(word: string): Promise<WordLookupResult | null> {
   const response = await fetch(`${DICTIONARY_API_BASE}/${encodeURIComponent(word)}`, {
     headers: { Accept: "application/json" },
   });
@@ -83,4 +92,26 @@ export async function lookupWord(word: string): Promise<WordLookupResult | null>
     etymology: entry.origin ?? null,
     synonyms,
   };
+}
+
+/**
+ * Pure orchestration: try `lookupPrimary` first, only call `lookupFallback`
+ * on an actual miss (null), never on both succeeding or both failing
+ * unnecessarily. Exported and parameterized specifically so this decision
+ * is unit-testable with fake async functions — no real network calls or
+ * mocking of fetch/Claude needed (see dictionary.test.ts).
+ */
+export async function resolveWordLookup(
+  word: string,
+  lookupPrimary: (word: string) => Promise<WordLookupResult | null>,
+  lookupFallback: (word: string) => Promise<WordLookupResult | null>,
+): Promise<WordLookupResult | null> {
+  const primaryResult = await lookupPrimary(word);
+  if (primaryResult) return primaryResult;
+  return lookupFallback(word);
+}
+
+/** Looks up `word` (already lowercased/sanitized by the caller): free API first, Claude fallback on a miss. Returns null only if both report no entry. */
+export async function lookupWord(word: string): Promise<WordLookupResult | null> {
+  return resolveWordLookup(word, lookupFreeApiWord, lookupWordWithClaudeFallback);
 }
