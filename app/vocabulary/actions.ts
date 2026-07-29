@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { lookupWord } from "@/lib/vocabulary/dictionary";
+import { lookupWordWithFallback } from "@/lib/vocabulary/lookup";
 import { lookupWordSchema } from "@/lib/vocabulary/schema";
 
 export interface VocabularyLookupResult {
@@ -56,7 +56,7 @@ export async function lookupAndSaveWord(word: string, sessionId?: string): Promi
     };
   }
 
-  const result = await lookupWord(parsed.word);
+  const result = await lookupWordWithFallback(parsed.word);
   if (!result) {
     return {
       found: false,
