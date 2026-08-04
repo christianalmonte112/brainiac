@@ -1,6 +1,6 @@
 # Roadmap — Brainiac
 
-**Last updated:** July 2026
+**Last updated:** August 2026
 
 This roadmap outlines the development phases for Brainiac from MVP through post-launch enhancements. Timelines are estimates and may shift based on feedback and priorities.
 
@@ -100,22 +100,23 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 ---
 
-## Phase 4 — Games & Community
+## Phase 4 — Games & Community ✅
 
-**Status:** Planned  
-**Target:** Week 5–7
+**Status:** Complete  
+**Completed:** August 2026  
+**Walkthrough:** [PHASE4_EXPLAINED.md](./PHASE4_EXPLAINED.md)
 
 | Item | Priority | Feature | Description |
 |------|----------|---------|-------------|
 | Visual learning games | P2 | F-013 | ✅ Shipped — matching + sequencing generated per session |
 | Memory games | P2 | F-014 | ✅ Shipped — vocabulary flashcards with spaced repetition |
 | Listening games with AI-broken-down song lyrics | P2 | F-015 | ✅ Shipped — user-pasted lyrics, TTS segments, blanks + questions |
-| Reddit-style community platform | P2 | F-016 | 🚧 MVP shipped — posts + threaded comments + delete-own; votes/moderation planned |
-| Dashboard analytics & streaks | P1 | F-006 | Avg score, session count, reading streak |
-| Landing page redesign | P1 | — | Brainiac branding, value prop, CTA |
-| Responsive mobile layout | P1 | — | Core flows work on mobile |
+| Reddit-style community platform | P2 | F-016 | ✅ Shipped (MVP) — posts + threaded comments + delete-own; votes/moderation deferred to Post-MVP |
+| Dashboard analytics & streaks | P1 | F-006 | ✅ Shipped — avg score, session count, streak, insights, badges, share card |
+| Landing page redesign | P1 | — | ❌ Cancelled — no splash/marketing landing; `/` routes straight into the app |
+| Responsive mobile layout | P1 | — | ✅ Shipped — core flows work smoothly on mobile |
 
-**Exit criteria:** Games available for practice; community platform MVP live; dashboard shows meaningful progress data.
+**Exit criteria:** Games available for practice; community platform MVP live; dashboard shows meaningful progress data. ✅
 
 ---
 
@@ -146,6 +147,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 
 | Feature | Value | Effort |
 |---------|-------|--------|
+| Community votes / moderation (F-016 follow-on) | Medium | Medium |
 | PDF upload & text extraction | High | Medium |
 | URL import (article scraping) | High | Medium |
 | Export session (PDF / Markdown) | Medium | Low |
@@ -167,7 +169,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 | Feature | Value | Effort |
 |---------|-------|--------|
 | Team / classroom mode (Clerk Orgs) | High | High |
-| Subscription billing | High | High |
+| Subscription billing | High | High | ✅ Shipped early (Stripe Premium) — see billing on Progress |
 | Mobile native apps | Medium | Very High |
 | Integration with Readwise / Notion | Medium | Medium |
 

@@ -36,7 +36,7 @@ What sets Brainiac apart from competitors like Readability and Mindgrasp is the 
 - **Secure auth** — Sign in/up via Clerk with protected routes
 
 See [docs/FEATURES.md](./docs/FEATURES.md) for the full feature list and [docs/ROADMAP.md](./docs/ROADMAP.md) for what's planned next.
-For plain-English phase walkthroughs, see [docs/PHASE2_EXPLAINED.md](./docs/PHASE2_EXPLAINED.md) and [docs/PHASE3_EXPLAINED.md](./docs/PHASE3_EXPLAINED.md).
+For plain-English phase walkthroughs, see [docs/PHASE2_EXPLAINED.md](./docs/PHASE2_EXPLAINED.md), [docs/PHASE3_EXPLAINED.md](./docs/PHASE3_EXPLAINED.md), and [docs/PHASE4_EXPLAINED.md](./docs/PHASE4_EXPLAINED.md).
 
 ---
 
@@ -158,6 +158,7 @@ brainiac/
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Development roadmap |
 | [docs/PHASE2_EXPLAINED.md](./docs/PHASE2_EXPLAINED.md) | Plain-English Phase 2 walkthrough |
 | [docs/PHASE3_EXPLAINED.md](./docs/PHASE3_EXPLAINED.md) | Plain-English Phase 3 walkthrough |
+| [docs/PHASE4_EXPLAINED.md](./docs/PHASE4_EXPLAINED.md) | Plain-English Phase 4 walkthrough |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
 
