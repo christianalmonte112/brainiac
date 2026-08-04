@@ -91,6 +91,11 @@ STRIPE_PRICE_ID_PREMIUM=price_...
 
 # Clerk webhook (syncs a User row the moment someone signs up)
 CLERK_WEBHOOK_SECRET=whsec_...
+
+# Upstash Redis (rate limiting on AI/voice API routes — free tier is plenty)
+# Create a database at https://console.upstash.com, then copy the REST URL/token.
+UPSTASH_REDIS_REST_URL=https://your-db.upstash.io
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 **Clerk webhook setup — a one-time manual step in your own Clerk Dashboard,

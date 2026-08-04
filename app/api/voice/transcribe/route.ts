@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { getElevenLabsClient } from "@/lib/elevenlabs/client";
 
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
@@ -8,6 +9,9 @@ export async function POST(request: Request) {
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("voice", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let formData: FormData;
   try {

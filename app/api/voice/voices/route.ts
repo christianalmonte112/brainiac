@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { getElevenLabsClient } from "@/lib/elevenlabs/client";
 
 interface VoiceResult {
@@ -12,6 +13,9 @@ export async function GET() {
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("voiceList", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   try {
     const response = await getElevenLabsClient().voices.search();

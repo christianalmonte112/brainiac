@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getAnthropic } from "@/lib/ai/client";
 import { QUIZ_GENERATOR_MODEL, QUIZ_GENERATOR_SYSTEM_PROMPT } from "@/lib/prompts/quiz";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 interface RawQuestion {
   question: string;
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("aiGeneration", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let body: { sessionId?: string };
   try {

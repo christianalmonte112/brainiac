@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { getAnthropic } from "@/lib/ai/client";
 import { SOCRATIC_TUTOR_MODEL, SOCRATIC_TUTOR_SYSTEM_PROMPT } from "@/lib/prompts/socratic";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,9 @@ export async function POST(request: Request) {
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("tutor", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let body: {
     sessionId?: string;
