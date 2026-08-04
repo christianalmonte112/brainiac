@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { getAnthropic } from "@/lib/ai/client";
 import { prisma } from "@/lib/prisma";
 import { SESSION_SUMMARY_MODEL, SESSION_SUMMARY_SYSTEM_PROMPT } from "@/lib/prompts/sessionSummary";
@@ -8,6 +9,9 @@ export async function POST(request: Request) {
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("aiGeneration", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let body: { sessionId?: string };
   try {

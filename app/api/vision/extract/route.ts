@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { extractTextFromImages, type ExtractableImageMediaType } from "@/lib/prompts/extractPageText";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB per image — plenty for a phone photo of a page.
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimitResponse = await checkRateLimit("aiGeneration", userId);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let formData: FormData;
   try {

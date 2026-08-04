@@ -127,7 +127,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 
 | Item | Priority | Description |
 |------|----------|-------------|
-| Environment hardening | P0 | Secrets, rate limits, CORS |
+| Environment hardening | P0 | 🚧 In progress — Upstash rate limits on AI/voice API routes shipped; CORS / broader secrets hardening still open |
 | User sync via Clerk webhook | P0 | ✅ Shipped — `app/api/clerk/webhook/route.ts` creates/updates the `User` row on `user.created`/`user.updated`, in real time at signup instead of only at baseline-assessment completion. Requires the manual Clerk Dashboard setup step in README. |
 | Monthly progress report vs. baseline | P1 | Email or in-app report showing growth since F-017 |
 | Feedback widget | P2 | In-app feedback collection |
