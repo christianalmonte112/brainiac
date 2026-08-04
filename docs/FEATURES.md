@@ -1,11 +1,11 @@
 # Features — Brainiac
 
 **Version:** 1.0  
-**Last updated:** July 2026
+**Last updated:** August 2026
 
 Detailed feature specifications for Brainiac. For product context see [PRD.md](./PRD.md); for implementation see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXPLAINED.md) and [PHASE3_EXPLAINED.md](./PHASE3_EXPLAINED.md).
+For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXPLAINED.md), [PHASE3_EXPLAINED.md](./PHASE3_EXPLAINED.md), and [PHASE4_EXPLAINED.md](./PHASE4_EXPLAINED.md).
 
 ---
 
@@ -18,7 +18,7 @@ For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXP
 | F-003 | Reading Sessions | 2 | ✅ Shipped |
 | F-004 | AI Summaries | 3 | ✅ Shipped |
 | F-005 | Comprehension Quizzes | 3 | ✅ Shipped |
-| F-006 | Dashboard & Progress | 2 / 4 | 🚧 In Progress |
+| F-006 | Dashboard & Progress | 2 / 4 | ✅ Shipped |
 | F-007 | Onboarding Tour | 5 | 🔲 Planned |
 | F-008 | Direct File Upload (.txt/.pdf) | Post-MVP | 🔲 Planned |
 | F-009 | URL Import | Post-MVP | 🔲 Planned |
@@ -28,7 +28,7 @@ For plain-English narrative walkthroughs, see [PHASE2_EXPLAINED.md](./PHASE2_EXP
 | F-013 | Visual Learning Games | 4 | ✅ Shipped |
 | F-014 | Memory Games | 4 | ✅ Shipped |
 | F-015 | Listening Games (Song Lyrics) | 4 | ✅ Shipped |
-| F-016 | Community Platform | 4 | 🚧 In progress (MVP shipped) |
+| F-016 | Community Platform | 4 | ✅ Shipped (MVP) |
 | F-017 | Onboarding Baseline Assessment | 2 | ✅ Shipped |
 | F-018 | Image/Photo Upload (Claude Vision OCR) | 3 | ✅ Shipped |
 | F-019 | Admin Analytics Dashboard | 3 | ✅ Shipped |
@@ -251,20 +251,25 @@ Stored as `QuizAttempt` with full answer map.
 
 ## F-006: Dashboard & Progress
 
-**Phase:** 2 / 4 · **Status:** 🚧 In Progress
+**Phase:** 2 / 4 · **Status:** ✅ Shipped
 
 ### Description
 
-Central hub showing session history, aggregate stats, and reading streak.
+Central hub showing session history, aggregate stats, reading streak, learning insights, badges, shareable progress card, and billing status. Phase 2 shipped the first dashboard; Phase 4 deepened it with insights, achievements, and share.
 
 ### Dashboard Sections
 
 | Section | Content |
 |---------|---------|
+| **What to work on next** | Prioritized next actions from learning insights |
 | **Stats row** | Total sessions, avg quiz score, current streak |
+| **Subscription** | Free vs Premium + Stripe upgrade / manage billing |
+| **Badges** | Earned achievement shelf |
+| **Share card** | Shareable progress snapshot |
 | **Recent sessions** | Last 10 sessions with title, date, score badge |
-| **Quick action** | "New Session" button |
-| **Empty state** | Illustration + CTA when no sessions |
+| **Baseline vs current** | WPM, comprehension, vocabulary, inference |
+| **Growth chart** | Reading speed over time |
+| **Empty state** | CTA when no sessions |
 
 ### Stats Calculations
 
@@ -272,14 +277,14 @@ Central hub showing session history, aggregate stats, and reading streak.
 |------|--------|
 | Total sessions | Count of non-archived `ReadingSession` |
 | Avg score | Mean of latest `QuizAttempt.score` per session (30 days) |
-| Streak | Consecutive calendar days with ≥1 `QuizAttempt` or session create |
+| Streak | Consecutive calendar days with completed reading activity (timezone-aware) |
 
 ### Acceptance Criteria
 
-- [ ] Dashboard loads with correct stats
-- [ ] Recent sessions list with pagination or "view all"
-- [ ] Empty state for new users
-- [ ] Stats update after new quiz attempt
+- [x] Dashboard loads with correct stats
+- [x] Recent sessions list
+- [x] Empty state for new users
+- [x] Stats update after new quiz attempt / completed sessions
 
 ---
 
@@ -526,24 +531,31 @@ AI breaks down song lyrics into comprehension exercises. Users listen to audio, 
 
 ## F-016: Community Platform
 
-**Phase:** 4 · **Status:** 🚧 In progress — MVP shipped (text posts + threaded comments + delete-own); votes, recommendations feed, and moderation still planned
+**Phase:** 4 · **Status:** ✅ Shipped (MVP) — votes, recommendations feed, and moderation deferred to Post-MVP
 
 ### Description
 
-Reddit-style community platform where users share reading recommendations, discuss sessions, post comprehension tips, and upvote helpful content.
+Community space where users share reading tips and discuss comprehension. Phase 4 ships a solid MVP (posts + threaded comments); Reddit-style ranking and moderation are intentionally deferred.
 
-### Core Features
+### Core Features (MVP)
 
-- User posts and threaded comments
+- User posts (plain text)
+- Threaded comments with replies
+- Delete-own posts and comments (ownership verified server-side)
+- Auth required for all actions
+
+### Deferred (Post-MVP)
+
 - Upvote / downvote on posts and comments
 - Reading recommendation lists
 - Moderation tools (report, hide)
 
 ### Acceptance Criteria
 
-- [ ] Users can create posts and comment
-- [ ] Voting updates scores in real time
-- [ ] Content moderated; auth required for all actions
+- [x] Users can create posts and comment
+- [x] Auth required for all actions
+- [ ] Voting updates scores in real time *(deferred)*
+- [ ] Content moderated *(deferred)*
 
 ---
 
