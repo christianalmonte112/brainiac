@@ -22,7 +22,9 @@ setup("sign in fixture user and save storage state", async ({ page }) => {
     );
   }
 
-  await page.goto("/");
+  // `/` is auth-protected (proxy.ts), so unauthenticated visits bounce to
+  // /sign-in. Use the public sign-in page so Clerk's JS actually loads.
+  await page.goto("/sign-in");
 
   // Server-side email-only sign-in: creates a token via the Backend API and
   // bypasses verification/MFA UI, which is fine here since this suite isn't
@@ -31,6 +33,8 @@ setup("sign in fixture user and save storage state", async ({ page }) => {
   // https://clerk.com/docs/guides/development/testing/playwright/test-helpers
   await clerk.signIn({ page, emailAddress: testEmail });
 
+  // clerk.signIn does not navigate — land on the reader library ourselves.
+  await page.goto("/reader");
   await page.waitForURL(/\/reader/, { timeout: 15_000 });
   await page.context().storageState({ path: authFile });
 });
