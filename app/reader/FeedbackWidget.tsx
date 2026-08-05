@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
+import { MessageSquare } from "lucide-react";
 import { submitFeedback } from "@/lib/feedback/actions";
 import { MAX_FEEDBACK_LENGTH } from "@/lib/feedback/validate";
 
@@ -50,23 +51,23 @@ export function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-1.5 text-sm font-medium text-black transition-opacity hover:opacity-70"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-black px-4 py-3 text-sm font-medium text-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-180 hover:-translate-y-0.5 hover:bg-neutral-900"
       >
+        <MessageSquare className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         Feedback
-        <span aria-hidden>→</span>
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-80 max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-200 bg-white shadow-xl">
-      <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <p className="text-sm font-semibold text-slate-900">Send feedback</p>
+    <div className="fixed bottom-6 right-6 z-40 w-80 max-w-[calc(100vw-3rem)] rounded-2xl border border-neutral-200 bg-white shadow-xl">
+      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+        <p className="text-sm font-semibold text-black">Send feedback</p>
         <button
           type="button"
           onClick={handleClose}
           aria-label="Close feedback"
-          className="text-slate-400 transition-colors hover:text-slate-600"
+          className="text-neutral-400 transition-colors hover:text-neutral-600"
         >
           ✕
         </button>
@@ -75,8 +76,8 @@ export function FeedbackWidget() {
       <div className="px-4 py-4">
         {submitted ? (
           <div className="flex flex-col items-center gap-2 py-4 text-center">
-            <p className="text-sm font-medium text-slate-900">Thanks — got it!</p>
-            <p className="text-xs text-slate-500">We read every note.</p>
+            <p className="text-sm font-medium text-black">Thanks — got it!</p>
+            <p className="text-xs text-neutral-500">We read every note.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -88,13 +89,13 @@ export function FeedbackWidget() {
               rows={4}
               autoFocus
               disabled={isPending}
-              className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none disabled:opacity-60"
+              className="w-full resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm text-black placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none disabled:opacity-60"
             />
             {error && <p className="text-xs text-rose-600">{error}</p>}
             <button
               type="submit"
               disabled={isPending || message.trim().length === 0}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+              className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-900 disabled:opacity-60"
             >
               {isPending ? "Sending…" : "Send"}
             </button>
