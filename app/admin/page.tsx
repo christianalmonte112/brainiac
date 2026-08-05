@@ -1,4 +1,5 @@
 import { clerkClient } from "@clerk/nextjs/server";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 function formatPercent(numerator: number, denominator: number): string {
@@ -37,6 +38,7 @@ export default async function AdminPage() {
     totalQuizzesTaken,
     avgQuizScore,
     totalVocabularyWords,
+    totalFeedbackCount,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.baselineAssessment.count(),
@@ -50,19 +52,21 @@ export default async function AdminPage() {
     prisma.quizAttempt.count(),
     prisma.quizAttempt.aggregate({ _avg: { score: true } }),
     prisma.vocabularyWord.count(),
+    prisma.feedback.count(),
   ]);
 
   // The true Clerk signup count — NOT the same as onboardedUsers above.
   //
-  // There's no Clerk -> Postgres signup webhook: a User row in Postgres is
-  // only ever created inside submitBaselineAssessment, at the very END of
-  // onboarding (see app/onboarding/assessment/actions.ts). That means
-  // prisma.user.count() can only ever count people who already finished
-  // onboarding — it structurally cannot represent "signups," and comparing
-  // it to baselineCompletedCount can never reveal real drop-off, since
-  // those two numbers are (almost) always equal by construction. Clerk
-  // itself is the only accurate source for how many people actually signed
-  // up, onboarded or not.
+  // A User row is now created immediately at signup via the Clerk webhook
+  // (see app/api/clerk/webhook/route.ts, Phase 5). Before that webhook
+  // existed, the only place a User row was ever created was inside
+  // submitBaselineAssessment — at the very end of onboarding — which meant
+  // prisma.user.count() could only ever count people who'd already
+  // finished onboarding. We still pull the signup count from Clerk's own
+  // API rather than Postgres: it remains the more defensive source of
+  // truth (e.g. if the webhook were ever misconfigured or missed an
+  // event, Clerk's count can't silently drift the way a derived Postgres
+  // count could), and it costs nothing extra to ask Clerk directly.
   const client = await clerkClient();
   const totalClerkSignups = await client.users.getCount();
 
@@ -108,10 +112,24 @@ export default async function AdminPage() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Vocabulary</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Vocabulary</h2>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
           <StatCard label="Vocabulary words saved" value={totalVocabularyWords.toLocaleString()} />
           <StatCard label="Average words per user" value={averageWordsPerUser} />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Feedback</h2>
+          <Link href="/admin/feedback" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            View all →
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Feedback submissions" value={totalFeedbackCount.toLocaleString()} />
         </div>
       </section>
     </main>

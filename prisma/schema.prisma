@@ -57,6 +57,7 @@ model User {
   communityPosts        CommunityPost[]
   communityComments     CommunityComment[]
   subscription          Subscription?
+  feedback              Feedback[]
 }
 
 /// Stripe subscription state for a user. Created lazily on first checkout;
@@ -468,4 +469,23 @@ model Badge {
 
   @@unique([userId, key])
   @@index([userId, earnedAt(sort: Desc)])
+}
+
+/// Phase 5 — free-text feedback submitted from the in-app widget (see
+/// app/reader/FeedbackWidget.tsx). Intentionally minimal for the beta: no
+/// status/triage fields yet, since with a small user base the admin
+/// dashboard's raw feedback list (app/admin/feedback) is the whole
+/// workflow. `page` records which route the feedback was submitted from,
+/// which is often the only context needed to know what someone meant.
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String   @db.Text
+  page      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
 }

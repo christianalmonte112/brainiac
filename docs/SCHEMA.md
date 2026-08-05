@@ -476,3 +476,9 @@ Plain-text post (`title`, `body`) authored by a signed-in user. Deleting a post 
 ### CommunityComment
 
 Threaded comment on a post. `parentId` (nullable) points at the parent comment; null means top-level. **MVP tradeoff:** `parentId` uses `onDelete: Cascade`, so deleting a comment deletes its whole reply subtree — chosen over soft-delete placeholders for simplicity; swap to a soft-delete `deletedAt` if threads later need to survive mid-node deletes. All mutations verify ownership server-side (`createPost` / `createComment` / `deleteOwnPost` / `deleteOwnComment` in `app/community/actions.ts`); replies are validated to belong to the same post as their parent.
+
+## 10. Feedback (Phase 5)
+
+### Feedback
+
+Free-text beta feedback from the floating reader widget (`app/reader/FeedbackWidget.tsx`). Fields: `userId`, `message` (Text), optional `page` (pathname when submitted), `createdAt`. No status/triage columns yet — admin reads the raw list at `/admin/feedback`. Submissions are rate-limited via the Upstash `feedback` tier (10/hour).

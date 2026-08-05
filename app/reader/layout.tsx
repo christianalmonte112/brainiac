@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { NavHeader } from "./NavHeader";
 import { Sidebar } from "./Sidebar";
 import { TimezoneSync } from "./TimezoneSync";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 export default async function ReaderLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -37,6 +38,7 @@ export default async function ReaderLayout({ children }: { children: React.React
         <Sidebar sessions={sessions} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <FeedbackWidget />
     </div>
   );
 }

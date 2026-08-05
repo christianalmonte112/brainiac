@@ -35,11 +35,14 @@ function getLimiter(prefix: string, requests: number, window: `${number} ${"s" |
 // - tutor: Claude calls that happen more frequently during a reading session
 // - voice: ElevenLabs TTS/STT calls
 // - voiceList: cheap metadata lookup, generous limit
+// - feedback: no paid API involved, but still a public text-input endpoint worth
+//   guarding against spam/abuse
 export const RATE_LIMIT_TIERS = {
   aiGeneration: () => getLimiter("ai-gen", 10, "1 h"),
   tutor: () => getLimiter("tutor", 30, "1 h"),
   voice: () => getLimiter("voice", 20, "1 h"),
   voiceList: () => getLimiter("voice-list", 60, "1 h"),
+  feedback: () => getLimiter("feedback", 10, "1 h"),
 } as const;
 
 export type RateLimitTier = keyof typeof RATE_LIMIT_TIERS;
