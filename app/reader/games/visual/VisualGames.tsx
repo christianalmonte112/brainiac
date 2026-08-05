@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { submitVisualGameAttempt, type VisualGameAttemptResult } from "./actions";
 
@@ -36,8 +36,10 @@ export function VisualGames({ sessionId, sessionTitle }: VisualGamesProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VisualGameAttemptResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   async function generate(gameType: GameType) {
+    if (loadingType) return;
     setLoadingType(gameType);
     setError(null);
     setResult(null);
@@ -60,7 +62,8 @@ export function VisualGames({ sessionId, sessionTitle }: VisualGamesProps) {
   }
 
   async function handleSubmit(selections: number[]) {
-    if (!game || isSubmitting) return;
+    if (!game || isSubmitting || submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -72,6 +75,7 @@ export function VisualGames({ sessionId, sessionTitle }: VisualGamesProps) {
     } catch {
       setError("Couldn't submit your answers. Please try again.");
     } finally {
+      submitInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }

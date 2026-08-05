@@ -50,6 +50,7 @@ export function ListeningGameFlow() {
   const [result, setResult] = useState<ListeningAttemptResult | null>(null);
 
   async function handleGenerate() {
+    if (isGenerating) return;
     setIsGenerating(true);
     setError(null);
     try {

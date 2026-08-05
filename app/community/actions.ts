@@ -89,7 +89,7 @@ export async function createComment(args: CreateCommentInput): Promise<{ error?:
 }
 
 /** Deletes the caller's own post (comments cascade at the DB level). */
-export async function deleteOwnPost(args: { postId: string }): Promise<void> {
+export async function deleteOwnPost(args: { postId: string }): Promise<{ error?: string }> {
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
@@ -101,7 +101,7 @@ export async function deleteOwnPost(args: { postId: string }): Promise<void> {
     select: { userId: true },
   });
   if (!post || post.userId !== userId) {
-    throw new Error("Post not found.");
+    return { error: "Post not found." };
   }
 
   await prisma.communityPost.delete({ where: { id: parsed.postId } });
