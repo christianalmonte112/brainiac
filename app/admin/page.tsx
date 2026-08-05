@@ -85,7 +85,12 @@ export default async function AdminPage() {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Users</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Users</h2>
+          <Link href="/admin/users" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            View roster →
+          </Link>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total signups" value={totalClerkSignups.toLocaleString()} />
           <StatCard label="Baseline completed" value={baselineCompletedCount.toLocaleString()} />
