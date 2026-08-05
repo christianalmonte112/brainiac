@@ -80,7 +80,17 @@ export async function POST(request: Request) {
 
     return Response.json({ text, pagesProcessed: files.length });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Text extraction failed";
-    return Response.json({ error: message }, { status: 502 });
+    const raw = error instanceof Error ? error.message : "Text extraction failed";
+    // Anthropic blocks verbatim book OCR; surface a clear message if this route is still hit.
+    if (/content filtering policy/i.test(raw)) {
+      return Response.json(
+        {
+          error:
+            "Claude blocked reading that page (copyright filter). Use the on-device photo OCR in the app, or paste the text instead.",
+        },
+        { status: 422 },
+      );
+    }
+    return Response.json({ error: raw }, { status: 502 });
   }
 }

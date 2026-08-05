@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { compressPageImage } from "@/lib/reader/compressPageImage";
+import { ocrPageImages } from "@/lib/reader/ocrPageImages";
 
 interface ImagePageUploadProps {
   /** Called with the transcribed text once extraction succeeds. Replaces the
@@ -29,38 +30,11 @@ function isAcceptedImage(file: File): boolean {
   return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
 }
 
-async function readExtractResponse(response: Response): Promise<{ text?: string; error?: string }> {
-  const raw = await response.text();
-  const status = response.status;
-
-  if (!raw.trim()) {
-    if (status === 413) {
-      return { error: "Those photos are too large to upload. Try fewer pages or a smaller image." };
-    }
-    if (status === 504 || status === 408) {
-      return { error: "Text extraction timed out. Try one clearer page photo and try again." };
-    }
-    return {
-      error: `Couldn't reach the text extractor (empty response, HTTP ${status || "unknown"}). Try a smaller JPEG.`,
-    };
-  }
-
-  try {
-    return JSON.parse(raw) as { text?: string; error?: string };
-  } catch {
-    if (status === 413) {
-      return { error: "Those photos are too large to upload. Try fewer pages or a smaller image." };
-    }
-    return {
-      error: `Text extraction failed (HTTP ${status}). Try a smaller JPEG photo.`,
-    };
-  }
-}
-
 export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<SelectedImage[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleFilesSelected(fileList: FileList | null) {
@@ -103,28 +77,23 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     if (images.length === 0) return;
     setIsExtracting(true);
     setError(null);
+    setStatusLabel("Preparing photos…");
 
     try {
-      const body = new FormData();
+      const prepared: File[] = [];
       for (const { file } of images) {
-        const prepared = await compressPageImage(file);
-        body.append("images", prepared);
+        prepared.push(await compressPageImage(file));
       }
 
-      const response = await fetch("/api/vision/extract", { method: "POST", body });
-      const data = await readExtractResponse(response);
-
-      if (!response.ok || !data.text) {
-        throw new Error(data.error ?? `HTTP ${response.status}`);
-      }
-
-      onExtracted(data.text);
+      const text = await ocrPageImages(prepared, setStatusLabel);
+      onExtracted(text);
       for (const { previewUrl } of images) URL.revokeObjectURL(previewUrl);
       setImages([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't extract text from those photos. Please try again.");
     } finally {
       setIsExtracting(false);
+      setStatusLabel(null);
     }
   }
 
@@ -149,8 +118,8 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
         />
         <span className="text-xs text-slate-500">
           {images.length > 0
-            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · auto-compressed`
-            : "Up to 10 pages · auto-compressed before upload"}
+            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · free on-device OCR`
+            : "Up to 10 pages · free on-device OCR (no API key)"}
         </span>
       </div>
 
@@ -185,7 +154,7 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
           className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isExtracting
-            ? "Preparing & reading photos…"
+            ? (statusLabel ?? "Reading photos…")
             : `Extract text from ${images.length} photo${images.length === 1 ? "" : "s"}`}
         </button>
       )}
