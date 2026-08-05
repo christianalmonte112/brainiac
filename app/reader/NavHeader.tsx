@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import type { ReadingSession } from "@prisma/client";
-import { BrainLogo } from "@/components/BrainLogo";
 import { MobileMenuButton } from "./MobileMenuButton";
 
 interface NavHeaderProps {
@@ -23,28 +22,27 @@ interface NavHeaderProps {
  */
 export function NavHeader({ sessions = [], isAdmin = false }: NavHeaderProps) {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 sm:px-6">
-      <div className="flex items-center gap-3 sm:gap-6">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-900/10 bg-white/80 px-4 backdrop-blur-md sm:px-6">
+      <div className="flex items-center gap-3 sm:gap-8">
         <MobileMenuButton sessions={sessions} isAdmin={isAdmin} />
-        <Link href="/reader" className="flex items-center gap-2 text-lg font-bold text-slate-900">
-          <BrainLogo size={28} className="h-7 w-7 shrink-0" />
+        <Link href="/reader" className="text-lg font-black tracking-tight text-slate-900">
           Brainiac
         </Link>
-        <nav className="hidden items-center gap-4 text-sm font-medium text-slate-600 md:flex">
-          <Link href="/reader/vocabulary" className="hover:text-slate-900">
+        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
+          <Link href="/reader/vocabulary" className="transition-colors hover:text-slate-900">
             Vocabulary
           </Link>
-          <Link href="/reader/games" className="hover:text-slate-900">
+          <Link href="/reader/games" className="transition-colors hover:text-slate-900">
             Games
           </Link>
-          <Link href="/reader/progress" className="hover:text-slate-900">
+          <Link href="/reader/progress" className="transition-colors hover:text-slate-900">
             Progress
           </Link>
-          <Link href="/community" className="hover:text-slate-900">
+          <Link href="/community" className="transition-colors hover:text-slate-900">
             Community
           </Link>
           {isAdmin && (
-            <Link href="/admin" className="hover:text-slate-900">
+            <Link href="/admin" className="transition-colors hover:text-slate-900">
               Admin
             </Link>
           )}

@@ -32,12 +32,12 @@ export default async function ReaderLayout({ children }: { children: React.React
   ]);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-[#F9F9FB] text-slate-900 antialiased">
       <TimezoneSync currentTimezone={user?.timezone ?? null} />
       <NavHeader sessions={sessions} isAdmin={isAdminUserId(userId)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar sessions={sessions} />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[#F8F8FA]">{children}</main>
       </div>
       <FeedbackWidget />
     </div>

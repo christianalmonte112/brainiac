@@ -96,7 +96,8 @@ export function MobileMenuButton({ sessions, isAdmin = false }: MobileMenuButton
         </nav>
 
         <NewSessionForm />
-        <div className="flex flex-1 flex-col gap-1 overflow-y-auto">
+        <div className="mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
+          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Your library</h2>
           <SessionList sessions={sessions} />
         </div>
       </aside>

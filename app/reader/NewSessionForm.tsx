@@ -18,10 +18,14 @@ export function NewSessionForm() {
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:border-slate-400 hover:text-slate-900"
+        className="flex w-full items-center justify-center gap-2 rounded-sm border border-slate-900 bg-white py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-900 transition-all hover:bg-slate-900 hover:text-white"
       >
-        + New document
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+        </svg>
+        New Document
       </button>
     );
   }

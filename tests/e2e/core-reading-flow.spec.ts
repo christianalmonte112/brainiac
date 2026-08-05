@@ -19,7 +19,7 @@ test("pasting text creates a session and lands on the reading view", async ({ pa
     "three vessels in his grandfather's time. He had never once missed a night.";
 
   await page.goto("/reader");
-  await page.getByRole("button", { name: "+ New document" }).click();
+  await page.getByRole("button", { name: /new document/i }).click();
 
   await page.getByPlaceholder("Title").fill(title);
   await page.getByPlaceholder("Paste the text you want to read...").fill(sourceText);
