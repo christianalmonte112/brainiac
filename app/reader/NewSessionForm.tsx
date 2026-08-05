@@ -35,7 +35,7 @@ export function NewSessionForm() {
         className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-black px-4 text-sm font-medium text-white transition-all duration-180 hover:-translate-y-0.5 hover:bg-neutral-900 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
       >
         <Plus className="h-4 w-4" strokeWidth={2} />
-        New document
+        New Document
       </button>
     );
   }

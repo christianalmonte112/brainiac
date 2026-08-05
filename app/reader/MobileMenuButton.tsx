@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ReadingSession } from "@prisma/client";
+import { BrainLogo } from "@/components/BrainLogo";
+import { Search } from "lucide-react";
 import { NewSessionForm } from "./NewSessionForm";
 import { SessionList } from "./SessionList";
+import { BaselineSparklineCard } from "./BaselineSparklineCard";
 
 interface MobileMenuButtonProps {
   sessions: ReadingSession[];
-  isAdmin?: boolean;
+  baselineWPM?: number | null;
 }
 
 const NAV_LINKS = [
@@ -16,26 +19,19 @@ const NAV_LINKS = [
   { href: "/reader/games", label: "Games" },
   { href: "/reader/progress", label: "Progress" },
   { href: "/community", label: "Community" },
+  { href: "/admin", label: "Admin" },
 ];
 
-/**
- * Mobile-only hamburger trigger + slide-over drawer (mobile responsiveness
- * pass). Below the `md` breakpoint, the persistent Sidebar is hidden
- * entirely (see Sidebar.tsx) and the nav links in NavHeader are hidden too
- * — both live in here instead, alongside the same NewSessionForm/SessionList
- * building blocks the desktop Sidebar uses, so there's no duplicated
- * session-library logic.
- *
- * Slide-over mechanics mirror VocabularyPanel.tsx's proven pattern (always
- * mounted, transform-toggled, so the animation plays both ways) rather than
- * inventing a new one — this one adds a backdrop for tap-outside-to-close
- * and an Escape-key handler, since a full navigation drawer benefits from
- * both more than a single-word definition panel does.
- */
-export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
+/** Mobile hamburger + drawer with brand, library search, and baseline card. */
+export function MobileMenuButton({ sessions, baselineWPM = null }: MobileMenuButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  // Always include Admin in the drawer (same as desktop nav); /admin stays owner-gated.
-  const links = [...NAV_LINKS, { href: "/admin", label: "Admin" }];
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter((s) => s.title.toLowerCase().includes(q));
+  }, [sessions, query]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,16 +48,13 @@ export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
         onClick={() => setIsOpen(true)}
         aria-label="Open menu"
         aria-expanded={isOpen}
-        className="flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 md:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-600 hover:bg-neutral-50 md:hidden"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
-      {/* Backdrop — present but transparent/non-interactive while closed, so
-          it can fade in/out rather than popping, and never intercepts
-          clicks when hidden. */}
       <div
         aria-hidden={!isOpen}
         onClick={() => setIsOpen(false)}
@@ -72,34 +65,57 @@ export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
 
       <aside
         aria-hidden={!isOpen}
-        className={`fixed inset-y-0 left-0 z-50 flex w-full max-w-xs flex-col gap-4 border-r border-slate-200 bg-white p-4 shadow-xl transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-full max-w-xs flex-col border-r border-neutral-200 bg-white shadow-xl transition-transform duration-300 md:hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-900">Menu</span>
-          <button onClick={() => setIsOpen(false)} aria-label="Close menu" className="text-sm text-slate-500 hover:text-slate-800">
+        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-4">
+          <div className="flex items-center gap-2">
+            <BrainLogo size={28} className="h-7 w-7 rounded-[7px]" />
+            <span className="text-sm font-semibold text-black">Brainiac</span>
+          </div>
+          <button onClick={() => setIsOpen(false)} aria-label="Close menu" className="text-sm text-neutral-500 hover:text-black">
             Close
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1 border-b border-slate-100 pb-4 text-sm font-medium text-slate-700">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setIsOpen(false)}
-              className="rounded-md px-2 py-2 hover:bg-slate-50 hover:text-slate-900"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+          <nav className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsOpen(false)}
+                className="rounded-xl px-2 py-2 hover:bg-neutral-50 hover:text-black"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
-        <NewSessionForm />
-        <div className="mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
-          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Your library</h2>
-          <SessionList sessions={sessions} />
+          <NewSessionForm />
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-black">Library</p>
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search documents..."
+                className="h-11 w-full rounded-2xl bg-neutral-100 py-2 pl-10 pr-3 text-sm text-black placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-200"
+              />
+            </label>
+          </div>
+
+          <div onClick={() => setIsOpen(false)}>
+            <SessionList sessions={filtered} />
+          </div>
+        </div>
+
+        <div className="space-y-3 border-t border-neutral-100 px-4 py-4">
+          <BaselineSparklineCard baselineWPM={baselineWPM} />
         </div>
       </aside>
     </>

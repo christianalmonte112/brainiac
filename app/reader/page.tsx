@@ -40,25 +40,16 @@ export default async function ReaderPage() {
     ? latestQuizScorePercent(lastSession.quizzes.flatMap((q) => q.attempts))
     : null;
 
-  const baselineWPM = baseline?.readingSpeedWPM ?? null;
-  const showBaselineCard = sessionCount === 0 && baselineWPM !== null;
+  const insight = buildReaderHomeInsight({
+    baselineWPM: baseline?.readingSpeedWPM ?? null,
+    sessionCount,
+    lastSessionTitle: lastSession?.title ?? null,
+    lastQuizScorePercent: lastQuizScore,
+    dueReviewCount,
+  });
 
-  const insight = showBaselineCard
-    ? null
-    : buildReaderHomeInsight({
-        baselineWPM,
-        sessionCount,
-        lastSessionTitle: lastSession?.title ?? null,
-        lastQuizScorePercent: lastQuizScore,
-        dueReviewCount,
-      });
+  // On the empty library home, baseline lives in the sidebar card — keep the hero clean.
+  const heroInsight = sessionCount === 0 ? null : insight;
 
-  return (
-    <ReaderEmptyHero
-      baselineWPM={baselineWPM}
-      showBaselineCard={showBaselineCard}
-      insight={insight}
-      dueReviewCount={dueReviewCount}
-    />
-  );
+  return <ReaderEmptyHero insight={heroInsight} dueReviewCount={dueReviewCount} />;
 }
