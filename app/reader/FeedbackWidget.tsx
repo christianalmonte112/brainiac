@@ -50,12 +50,10 @@ export function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-white hover:text-slate-900"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-1.5 text-sm font-medium text-black transition-opacity hover:opacity-70"
       >
         Feedback
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
+        <span aria-hidden>→</span>
       </button>
     );
   }

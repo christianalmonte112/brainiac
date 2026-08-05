@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminUserId } from "@/lib/admin/requireAdmin";
 import { NavHeader } from "./NavHeader";
 import { Sidebar } from "./Sidebar";
+import { IconRail } from "./IconRail";
 import { TimezoneSync } from "./TimezoneSync";
 import { FeedbackWidget } from "./FeedbackWidget";
 
@@ -32,12 +33,15 @@ export default async function ReaderLayout({ children }: { children: React.React
   ]);
 
   return (
-    <div className="flex h-screen flex-col bg-[#F9F9FB] text-slate-900 antialiased">
+    <div className="flex h-screen bg-[#F9F9FB] font-sans text-slate-900 antialiased">
       <TimezoneSync currentTimezone={user?.timezone ?? null} />
-      <NavHeader sessions={sessions} isAdmin={isAdminUserId(userId)} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar sessions={sessions} />
-        <main className="flex-1 overflow-y-auto bg-[#F8F8FA]">{children}</main>
+      <IconRail />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <NavHeader sessions={sessions} isAdmin={isAdminUserId(userId)} />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar sessions={sessions} />
+          <main className="relative flex-1 overflow-y-auto bg-white">{children}</main>
+        </div>
       </div>
       <FeedbackWidget />
     </div>
