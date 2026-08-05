@@ -31,26 +31,28 @@ function isAcceptedImage(file: File): boolean {
 
 async function readExtractResponse(response: Response): Promise<{ text?: string; error?: string }> {
   const raw = await response.text();
+  const status = response.status;
+
   if (!raw.trim()) {
-    if (response.status === 413) {
+    if (status === 413) {
       return { error: "Those photos are too large to upload. Try fewer pages or a smaller image." };
     }
+    if (status === 504 || status === 408) {
+      return { error: "Text extraction timed out. Try one clearer page photo and try again." };
+    }
     return {
-      error:
-        response.status >= 500
-          ? "Text extraction failed on the server. Please try again in a moment."
-          : "Couldn't reach the text extractor (empty response). Try a smaller photo or fewer pages.",
+      error: `Couldn't reach the text extractor (empty response, HTTP ${status || "unknown"}). Try a smaller JPEG.`,
     };
   }
 
   try {
     return JSON.parse(raw) as { text?: string; error?: string };
   } catch {
-    if (response.status === 413) {
+    if (status === 413) {
       return { error: "Those photos are too large to upload. Try fewer pages or a smaller image." };
     }
     return {
-      error: `Text extraction failed (HTTP ${response.status}). Try a smaller JPEG photo.`,
+      error: `Text extraction failed (HTTP ${status}). Try a smaller JPEG photo.`,
     };
   }
 }
@@ -147,8 +149,8 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
         />
         <span className="text-xs text-slate-500">
           {images.length > 0
-            ? `${images.length} page${images.length === 1 ? "" : "s"} selected`
-            : "Up to 10 pages · photos are compressed before upload"}
+            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · auto-compressed`
+            : "Up to 10 pages · auto-compressed before upload"}
         </span>
       </div>
 

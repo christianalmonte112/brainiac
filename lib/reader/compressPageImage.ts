@@ -4,10 +4,10 @@
  * around 4.5MB, so we downscale and re-encode as JPEG before POST.
  */
 
-export const MAX_VISION_EDGE_PX = 2048;
-export const VISION_JPEG_QUALITY = 0.82;
+export const MAX_VISION_EDGE_PX = 1600;
+export const VISION_JPEG_QUALITY = 0.75;
 /** Soft per-file target after compression (keeps multi-page posts under platform limits). */
-export const TARGET_VISION_FILE_BYTES = 900_000;
+export const TARGET_VISION_FILE_BYTES = 500_000;
 
 export function scaledDimensions(
   width: number,
@@ -61,8 +61,7 @@ async function loadImageElement(file: File): Promise<HTMLImageElement> {
  * Returns the original file when it's already a small enough JPEG.
  */
 export async function compressPageImage(file: File): Promise<File> {
-  const alreadySmallJpeg =
-    file.type === "image/jpeg" && file.size <= TARGET_VISION_FILE_BYTES;
+  const alreadySmallJpeg = file.type === "image/jpeg" && file.size <= TARGET_VISION_FILE_BYTES;
 
   const img = await loadImageElement(file);
   const { width, height } = scaledDimensions(img.naturalWidth, img.naturalHeight);
@@ -83,7 +82,7 @@ export async function compressPageImage(file: File): Promise<File> {
   let blob = await encodeCanvas(canvas, quality);
 
   // Step quality down if still huge (common with dense book-page photos).
-  while (blob.size > TARGET_VISION_FILE_BYTES && quality > 0.5) {
+  while (blob.size > TARGET_VISION_FILE_BYTES && quality > 0.45) {
     quality = Math.round((quality - 0.1) * 10) / 10;
     blob = await encodeCanvas(canvas, quality);
   }
