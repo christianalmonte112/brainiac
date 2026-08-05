@@ -66,6 +66,7 @@ export default async function MonthlyReportPage() {
         where: { userId, createdAt: { gte: dbCutoff } },
         select: {
           answers: true,
+          createdAt: true,
           quiz: {
             select: { questions: { orderBy: { orderIndex: "asc" }, select: { orderIndex: true, prompt: true, correctIndex: true } } },
           },
