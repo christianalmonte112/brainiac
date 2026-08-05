@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { isAdminUserId } from "@/lib/admin/requireAdmin";
 import { NavHeader } from "@/app/reader/NavHeader";
 
 /**
@@ -16,7 +17,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen flex-col">
-      <NavHeader />
+      <NavHeader isAdmin={isAdminUserId(userId)} />
       <main className="flex-1">{children}</main>
     </div>
   );
