@@ -131,7 +131,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | User sync via Clerk webhook | P0 | ✅ Shipped — `app/api/clerk/webhook/route.ts` creates/updates the `User` row on `user.created`/`user.updated`, in real time at signup instead of only at baseline-assessment completion. Requires the manual Clerk Dashboard setup step in README. |
 | Monthly progress report vs. baseline | P1 | Email or in-app report showing growth since F-017 |
 | Feedback widget | P2 | ✅ Shipped — floating widget on reader routes; admin inbox at `/admin/feedback`; rate-limited via Upstash `feedback` tier |
-| Beta user invite list | P1 | Controlled rollout |
+| Beta user invite list | P1 | ✅ Shipped — admin allowlist at `/admin/invites`; Clerk `user.created` webhook accepts PENDING invites and bans everyone else |
 | E2E tests with Playwright + Clerk | P2 | Auth and core flow coverage |
 | Performance testing | P1 | Load test AI endpoints |
 

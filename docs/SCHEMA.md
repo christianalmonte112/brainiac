@@ -482,3 +482,9 @@ Threaded comment on a post. `parentId` (nullable) points at the parent comment; 
 ### Feedback
 
 Free-text beta feedback from the floating reader widget (`app/reader/FeedbackWidget.tsx`). Fields: `userId`, `message` (Text), optional `page` (pathname when submitted), `createdAt`. No status/triage columns yet — admin reads the raw list at `/admin/feedback`. Submissions are rate-limited via the Upstash `feedback` tier (10/hour).
+
+## 11. Beta invites (Phase 5)
+
+### Invite
+
+Allowlist email for invite-only signup. `email` is unique and stored lowercased. Statuses: `PENDING` → `ACCEPTED` (on Clerk `user.created` when the email matches) or removed on revoke. No FK to `User` — the invite exists before any account. Enforced in `app/api/clerk/webhook/route.ts` (ban uninvited Clerk users).

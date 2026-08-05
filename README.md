@@ -105,6 +105,8 @@ same pattern as Stripe's webhook, and can't be done from inside this repo:**
 3. Copy its signing secret into `CLERK_WEBHOOK_SECRET`.
 4. For local development, Clerk's Dashboard can send test events directly to a public URL (e.g. via `ngrok` or a Vercel preview deployment) — there's no local CLI tunnel for this one the way `stripe listen` works for Stripe.
 
+**Beta invites:** Sign-up is allowlist-only. Add emails in `/admin/invites` *before* sharing the sign-up link. The Clerk webhook accepts `PENDING` invites on `user.created` and bans everyone else. Existing signed-in users are unaffected; only new signups are gated.
+
 ### 3. Database setup
 
 ```bash

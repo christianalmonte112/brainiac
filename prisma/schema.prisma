@@ -489,3 +489,26 @@ model Feedback {
   @@index([createdAt(sort: Desc)])
   @@index([userId])
 }
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+/// Phase 5 — beta invite gate. Since we're not paying for Clerk's
+/// Restricted sign-up mode, this table is our own allowlist: an admin adds
+/// an email here (app/admin/invites), and the Clerk webhook
+/// (app/api/clerk/webhook) checks it on user.created. No relation to
+/// User by design — an invite exists BEFORE the invitee has any account
+/// at all, so there's nothing to foreign-key against yet. Matched by
+/// lowercased email; see lib/invites/validate.ts.
+model Invite {
+  id         String       @id @default(cuid())
+  email      String       @unique
+  status     InviteStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  acceptedAt DateTime?
+
+  @@index([status])
+}
