@@ -39,6 +39,8 @@ export default async function AdminPage() {
     avgQuizScore,
     totalVocabularyWords,
     totalFeedbackCount,
+    pendingInviteCount,
+    acceptedInviteCount,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.baselineAssessment.count(),
@@ -53,6 +55,8 @@ export default async function AdminPage() {
     prisma.quizAttempt.aggregate({ _avg: { score: true } }),
     prisma.vocabularyWord.count(),
     prisma.feedback.count(),
+    prisma.invite.count({ where: { status: "PENDING" } }),
+    prisma.invite.count({ where: { status: "ACCEPTED" } }),
   ]);
 
   // The true Clerk signup count — NOT the same as onboardedUsers above.
@@ -130,6 +134,19 @@ export default async function AdminPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Feedback submissions" value={totalFeedbackCount.toLocaleString()} />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Beta invites</h2>
+          <Link href="/admin/invites" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            Manage →
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Pending invites" value={pendingInviteCount.toLocaleString()} />
+          <StatCard label="Accepted invites" value={acceptedInviteCount.toLocaleString()} />
         </div>
       </section>
     </main>
