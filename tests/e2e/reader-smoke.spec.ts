@@ -13,7 +13,7 @@ test("signed-in user reaches the reader library, not onboarding or sign-in", asy
   // see tests/e2e/README.md's fixture setup steps.
   await expect(page).toHaveURL(/\/reader$/);
 
-  await expect(page.getByRole("button", { name: "+ New document" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /new document/i })).toBeVisible();
 });
 
 test("progress page loads and shows the baseline comparison", async ({ page }) => {

@@ -19,7 +19,18 @@ const STATUS_LABEL: Record<ReadingSession["status"], string> = {
  */
 export function SessionList({ sessions }: SessionListProps) {
   if (sessions.length === 0) {
-    return <p className="px-3 text-sm text-slate-500">No documents yet. Add your first one above.</p>;
+    return (
+      <div className="flex flex-col gap-2 px-0.5 text-xs leading-relaxed text-slate-400">
+        <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 12.121 8H19.5A1.5 1.5 0 0 1 21 9.5v9A1.5 1.5 0 0 1 19.5 20h-15A1.5 1.5 0 0 1 3 18.5v-11Z"
+          />
+        </svg>
+        <p>No documents yet. Add your first one above.</p>
+      </div>
+    );
   }
 
   return (
