@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { buildCommentTree, type ThreadNode } from "@/lib/community/thread";
 import { createComment, deleteOwnComment } from "../actions";
 
@@ -59,6 +60,7 @@ function CommentNode({
   ownUserId: string;
   level: number;
 }) {
+  const router = useRouter();
   const [replying, setReplying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,9 +75,9 @@ function CommentNode({
     if (result.error) {
       setError(result.error);
       setIsDeleting(false);
+      return;
     }
-    // On success the server action revalidates the page — the comment
-    // disappears with the refreshed data; no local state to clean up.
+    router.refresh();
   }
 
   return (
@@ -133,6 +135,7 @@ function CommentForm({
   submitLabel: string;
   onDone?: () => void;
 }) {
+  const router = useRouter();
   const [body, setBody] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +152,7 @@ function CommentForm({
     }
     setBody("");
     onDone?.();
+    router.refresh();
   }
 
   return (

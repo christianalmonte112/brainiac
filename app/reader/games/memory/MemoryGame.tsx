@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  applyAnswer,
+  createMemoryRoundState,
+  isRoundFinished,
+  resetMemoryRound,
+} from "@/lib/games/memoryRoundState";
 import { submitVocabularyReview } from "./actions";
 
 export interface MemoryCard {
@@ -26,32 +32,36 @@ interface MemoryGameProps {
  */
 export function MemoryGame({ cards }: MemoryGameProps) {
   const router = useRouter();
-  const [cardIndex, setCardIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
-  const [missedWords, setMissedWords] = useState<string[]>([]);
+  const [round, setRound] = useState(createMemoryRoundState);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const inFlightRef = useRef(false);
 
   const totalCards = cards.length;
-  const finished = cardIndex >= totalCards;
+  const finished = isRoundFinished(round, totalCards);
+  const { cardIndex, revealed, correctCount, missedWords } = round;
+
+  function resetRound() {
+    setRound(resetMemoryRound());
+    setSaveError(null);
+    inFlightRef.current = false;
+    setIsSaving(false);
+  }
 
   async function handleAnswer(correct: boolean) {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     const card = cards[cardIndex];
     setIsSaving(true);
     setSaveError(null);
     try {
       await submitVocabularyReview({ vocabularyWordId: card.id, correct });
-      if (correct) {
-        setCorrectCount((count) => count + 1);
-      } else {
-        setMissedWords((words) => [...words, card.word]);
-      }
-      setRevealed(false);
-      setCardIndex((index) => index + 1);
+      setRound((prev) => applyAnswer(prev, card.word, correct));
     } catch {
       setSaveError("Couldn't save that answer. Please try again.");
     } finally {
+      inFlightRef.current = false;
       setIsSaving(false);
     }
   }
@@ -85,7 +95,10 @@ export function MemoryGame({ cards }: MemoryGameProps) {
         <div className="flex flex-col gap-3 sm:flex-row">
           {missedWords.length > 0 && (
             <button
-              onClick={() => router.refresh()}
+              onClick={() => {
+                resetRound();
+                router.refresh();
+              }}
               className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
             >
               Review missed words
@@ -137,7 +150,7 @@ export function MemoryGame({ cards }: MemoryGameProps) {
           </>
         ) : (
           <button
-            onClick={() => setRevealed(true)}
+            onClick={() => setRound((prev) => ({ ...prev, revealed: true }))}
             className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
           >
             Flip card

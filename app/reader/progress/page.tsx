@@ -29,7 +29,6 @@ import { getSubscriptionForUser } from "@/lib/subscription/getSubscription";
 import { isPremiumStatus } from "@/lib/subscription/status";
 
 const RECENT_SESSION_LIMIT = 10;
-const THIRTY_DAYS_AGO = new Date(Date.now() - 30 * 86_400_000);
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -49,6 +48,10 @@ function scoreBadgeClass(pct: number): string {
 /** F-006 progress dashboard — stats, learning insights, baseline comparison, growth chart. */
 export default async function ProgressPage() {
   const { userId } = await auth();
+  // Per-request (same pattern as admin page) so a warm process doesn't freeze
+  // the window at module load. Avoid Date.now() here — react-hooks/purity flags it.
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const [
     baseline,
@@ -97,7 +100,7 @@ export default async function ProgressPage() {
           },
         }),
         prisma.quizAttempt.findMany({
-          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          where: { userId, createdAt: { gte: thirtyDaysAgo } },
           select: {
             score: true,
             createdAt: true,
@@ -105,7 +108,7 @@ export default async function ProgressPage() {
           },
         }),
         prisma.quizAttempt.findMany({
-          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          where: { userId, createdAt: { gte: thirtyDaysAgo } },
           select: {
             answers: true,
             quiz: {
@@ -125,7 +128,7 @@ export default async function ProgressPage() {
           select: { id: true, title: true },
         }),
         prisma.highlightInteraction.findMany({
-          where: { userId, createdAt: { gte: THIRTY_DAYS_AGO } },
+          where: { userId, createdAt: { gte: thirtyDaysAgo } },
           orderBy: { createdAt: "desc" },
           take: 5,
           select: { selectedText: true },
