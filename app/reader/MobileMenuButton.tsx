@@ -32,9 +32,10 @@ const NAV_LINKS = [
  * and an Escape-key handler, since a full navigation drawer benefits from
  * both more than a single-word definition panel does.
  */
-export function MobileMenuButton({ sessions, isAdmin = false }: MobileMenuButtonProps) {
+export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const links = isAdmin ? [...NAV_LINKS, { href: "/admin", label: "Admin" }] : NAV_LINKS;
+  // Always include Admin in the drawer (same as desktop nav); /admin stays owner-gated.
+  const links = [...NAV_LINKS, { href: "/admin", label: "Admin" }];
 
   useEffect(() => {
     if (!isOpen) return;

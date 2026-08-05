@@ -29,24 +29,27 @@ export function NavHeader({ sessions = [], isAdmin = false }: NavHeaderProps) {
         <Link href="/reader" className="text-lg font-black tracking-tight text-slate-900">
           Brainiac
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-          <Link href="/reader/vocabulary" className="transition-colors hover:text-slate-900">
+        <nav className="hidden items-center gap-6 text-sm font-medium text-black/70 md:flex">
+          <Link href="/reader/vocabulary" className="transition-colors hover:text-black">
             Vocabulary
           </Link>
-          <Link href="/reader/games" className="transition-colors hover:text-slate-900">
+          <Link href="/reader/games" className="transition-colors hover:text-black">
             Games
           </Link>
-          <Link href="/reader/progress" className="transition-colors hover:text-slate-900">
+          <Link href="/reader/progress" className="transition-colors hover:text-black">
             Progress
           </Link>
-          <Link href="/community" className="transition-colors hover:text-slate-900">
+          <Link href="/community" className="transition-colors hover:text-black">
             Community
           </Link>
-          {isAdmin && (
-            <Link href="/admin" className="transition-colors hover:text-slate-900">
-              Admin
-            </Link>
-          )}
+          {/* Always show in the shell; /admin layout still redirects non-owners.
+              Preview deploys often lack ADMIN_USER_ID, which hid this link before. */}
+          <Link
+            href="/admin"
+            className={`transition-colors hover:text-black ${isAdmin ? "text-black" : ""}`}
+          >
+            Admin
+          </Link>
         </nav>
       </div>
       <UserButton />

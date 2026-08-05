@@ -40,7 +40,7 @@ export default async function ReaderLayout({ children }: { children: React.React
         <NavHeader sessions={sessions} isAdmin={isAdminUserId(userId)} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar sessions={sessions} />
-          <main className="relative flex-1 overflow-y-auto bg-[#F8F8FA]">{children}</main>
+          <main className="relative flex-1 overflow-y-auto bg-white">{children}</main>
         </div>
       </div>
       <FeedbackWidget />

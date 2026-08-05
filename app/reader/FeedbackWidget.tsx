@@ -50,7 +50,7 @@ export function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-white hover:text-slate-900"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-1.5 text-sm font-medium text-black transition-opacity hover:opacity-70"
       >
         Feedback
         <span aria-hidden>→</span>
