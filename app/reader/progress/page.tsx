@@ -376,7 +376,12 @@ export default async function ProgressPage() {
       </Link>
 
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Baseline vs. current</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Baseline vs. current</h2>
+          <Link href="/reader/progress/monthly" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            Monthly report →
+          </Link>
+        </div>
         <table className="mt-3 w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500">
