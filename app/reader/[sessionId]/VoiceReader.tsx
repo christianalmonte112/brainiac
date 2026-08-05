@@ -34,6 +34,9 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
   const generateAbortRef = useRef<AbortController | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const useBrowserTtsRef = useRef(false);
+  /** Char offset for Chrome-safe pause/resume (native pause() is broken in Chromium). */
+  const browserCharIndexRef = useRef(0);
+  const browserPausedRef = useRef(false);
 
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_ID);
@@ -42,12 +45,14 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBrowserPaused, setIsBrowserPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const hasAudio = Boolean(audioUrl);
+  const showBrowserControls = useBrowserTts && !hasAudio;
   const progressPercent =
     duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
   const formattedTime = useMemo(() => {
@@ -80,7 +85,6 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
         if (cancelled) return;
 
         if (!res.ok) {
-          // Preview often lacks ELEVENLABS_API_KEY — fall back to free browser TTS.
           enableBrowserVoices();
           return;
         }
@@ -110,7 +114,6 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       }
     })();
 
-    // Chrome loads browser voices asynchronously.
     const onVoicesChanged = () => {
       if (!cancelled && useBrowserTtsRef.current) {
         enableBrowserVoices();
@@ -124,6 +127,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       cancelled = true;
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -132,9 +136,6 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     return () => {
       generateAbortRef.current?.abort();
       if (audioUrl) URL.revokeObjectURL(audioUrl);
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
     };
   }, [audioUrl]);
 
@@ -152,12 +153,17 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     setIsGenerating(false);
   }
 
-  function stopBrowserSpeech() {
+  function stopBrowserSpeech({ keepPosition = false }: { keepPosition?: boolean } = {}) {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
     utteranceRef.current = null;
     setIsPlaying(false);
+    if (!keepPosition) {
+      browserCharIndexRef.current = 0;
+      browserPausedRef.current = false;
+      setIsBrowserPaused(false);
+    }
   }
 
   function resetPlayerState() {
@@ -183,13 +189,23 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     setError(null);
   }
 
-  function speakWithBrowser() {
+  function speakWithBrowser(fromCharIndex = 0) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       throw new Error("This browser doesn't support free speech playback.");
     }
 
-    stopBrowserSpeech();
-    const utterance = new SpeechSynthesisUtterance(chunkText);
+    const text = chunkText.slice(fromCharIndex);
+    if (!text.trim()) {
+      browserCharIndexRef.current = 0;
+      browserPausedRef.current = false;
+      setIsBrowserPaused(false);
+      setIsPlaying(false);
+      return;
+    }
+
+    // Cancel any in-flight utterance without wiping our resume offset.
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = playbackRate;
 
     const voiceUri = selectedVoice.startsWith(BROWSER_VOICE_PREFIX)
@@ -198,12 +214,27 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     const match = window.speechSynthesis.getVoices().find((v) => v.voiceURI === voiceUri);
     if (match) utterance.voice = match;
 
-    utterance.onstart = () => setIsPlaying(true);
+    utterance.onboundary = (event) => {
+      if (typeof event.charIndex === "number") {
+        browserCharIndexRef.current = fromCharIndex + event.charIndex;
+      }
+    };
+    utterance.onstart = () => {
+      browserPausedRef.current = false;
+      setIsBrowserPaused(false);
+      setIsPlaying(true);
+    };
     utterance.onend = () => {
+      // onend also fires after cancel() — ignore if we paused intentionally.
+      if (browserPausedRef.current) return;
+      browserCharIndexRef.current = 0;
       setIsPlaying(false);
+      setIsBrowserPaused(false);
       utteranceRef.current = null;
     };
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
+      // "interrupted" / "canceled" is expected when pausing.
+      if (event.error === "interrupted" || event.error === "canceled") return;
       setIsPlaying(false);
       utteranceRef.current = null;
       setError("Browser speech failed. Try another voice or enable ElevenLabs on Preview.");
@@ -213,20 +244,69 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     window.speechSynthesis.speak(utterance);
   }
 
-  async function handleGenerateAudio() {
-    abortInFlightGeneration();
-    resetPlayerState();
-    setError(null);
+  function pauseBrowserSpeech() {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-    if (useBrowserTts || isBrowserVoiceId(selectedVoice)) {
-      try {
-        speakWithBrowser();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not play audio.");
+    browserPausedRef.current = true;
+    setIsBrowserPaused(true);
+    setIsPlaying(false);
+
+    // Prefer native pause when it works (Safari/Firefox).
+    window.speechSynthesis.pause();
+
+    // Chromium often ignores pause() — fall back to cancel + resume-from-charIndex.
+    window.setTimeout(() => {
+      const synth = window.speechSynthesis;
+      if (synth.speaking && !synth.paused) {
+        synth.cancel();
+      } else if (synth.paused) {
+        // Native pause worked — keep playing=false, paused=true.
       }
+    }, 40);
+  }
+
+  function resumeBrowserSpeech() {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const synth = window.speechSynthesis;
+    if (synth.paused) {
+      browserPausedRef.current = false;
+      setIsBrowserPaused(false);
+      setIsPlaying(true);
+      synth.resume();
       return;
     }
 
+    speakWithBrowser(browserCharIndexRef.current);
+  }
+
+  function handleBrowserListenClick() {
+    setError(null);
+    if (isPlaying) {
+      pauseBrowserSpeech();
+      return;
+    }
+    if (isBrowserPaused) {
+      resumeBrowserSpeech();
+      return;
+    }
+    browserCharIndexRef.current = 0;
+    try {
+      speakWithBrowser(0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not play audio.");
+    }
+  }
+
+  async function handleGenerateAudio() {
+    if (useBrowserTts || isBrowserVoiceId(selectedVoice)) {
+      handleBrowserListenClick();
+      return;
+    }
+
+    abortInFlightGeneration();
+    resetPlayerState();
+    setError(null);
     setIsGenerating(true);
     const controller = new AbortController();
     generateAbortRef.current = controller;
@@ -244,10 +324,9 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
 
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        // If ElevenLabs isn't configured, drop to free browser TTS instead of failing hard.
         if (data.error?.includes("ELEVENLABS_API_KEY") || res.status === 502) {
           enableBrowserVoices();
-          speakWithBrowser();
+          speakWithBrowser(0);
           return;
         }
         throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -264,10 +343,9 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
       }
-      // Last resort: free browser voice.
       try {
         enableBrowserVoices();
-        speakWithBrowser();
+        speakWithBrowser(0);
       } catch {
         setError(
           error instanceof Error
@@ -285,11 +363,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
 
   function togglePlayback() {
     if (useBrowserTts || isBrowserVoiceId(selectedVoice)) {
-      if (isPlaying) {
-        stopBrowserSpeech();
-      } else {
-        speakWithBrowser();
-      }
+      handleBrowserListenClick();
       return;
     }
 
@@ -309,22 +383,23 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     setCurrentTime(audio.currentTime);
   }
 
+  const browserListenLabel = isPlaying
+    ? "⏸ Pause"
+    : isBrowserPaused
+      ? "▶ Resume"
+      : "🔊 Listen to this section";
+
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
+            type="button"
             onClick={handleGenerateAudio}
             disabled={isGenerating}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isGenerating
-              ? "Generating audio..."
-              : useBrowserTts
-                ? isPlaying
-                  ? "⏹ Stop"
-                  : "🔊 Listen to this section"
-                : "🔊 Listen to this section"}
+            {isGenerating ? "Generating audio..." : useBrowserTts ? browserListenLabel : "🔊 Listen to this section"}
           </button>
 
           <label className="flex items-center gap-2 text-xs text-slate-500">
@@ -372,6 +447,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
 
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={togglePlayback}
                 className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700"
               >
@@ -397,6 +473,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
               {SPEEDS.map((speed) => (
                 <button
                   key={speed}
+                  type="button"
                   onClick={() => setPlaybackRate(speed)}
                   className={`rounded-full px-2.5 py-1 transition-colors ${
                     playbackRate === speed
@@ -411,22 +488,43 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
           </div>
         )}
 
-        {useBrowserTts && !hasAudio && (
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Speed</span>
-            {SPEEDS.map((speed) => (
-              <button
-                key={speed}
-                onClick={() => setPlaybackRate(speed)}
-                className={`rounded-full px-2.5 py-1 transition-colors ${
-                  playbackRate === speed
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {speed}x
-              </button>
-            ))}
+        {showBrowserControls && (
+          <div className="flex flex-wrap items-center gap-2">
+            {(isPlaying || isBrowserPaused) && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleBrowserListenClick}
+                  className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+                >
+                  {isPlaying ? "Pause" : "Resume"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stopBrowserSpeech()}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Stop
+                </button>
+              </>
+            )}
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>Speed</span>
+              {SPEEDS.map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  onClick={() => setPlaybackRate(speed)}
+                  className={`rounded-full px-2.5 py-1 transition-colors ${
+                    playbackRate === speed
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
