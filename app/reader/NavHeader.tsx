@@ -25,6 +25,7 @@ export function NavHeader({ sessions = [], isAdmin = false }: NavHeaderProps) {
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-900/10 bg-white/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3 sm:gap-8">
         <MobileMenuButton sessions={sessions} isAdmin={isAdmin} />
+        {/* Wordmark only — Gemini mock had a Brain icon; we keep text-only per product preference. */}
         <Link href="/reader" className="text-lg font-black tracking-tight text-slate-900">
           Brainiac
         </Link>
