@@ -1,5 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 
+/** True when `userId` matches `ADMIN_USER_ID` (server-only env). */
+export function isAdminUserId(userId: string | null | undefined): boolean {
+  const adminUserId = process.env.ADMIN_USER_ID;
+  return Boolean(userId && adminUserId && userId === adminUserId);
+}
+
 /**
  * Guards admin-only Server Actions.
  *
@@ -13,9 +19,7 @@ import { auth } from "@clerk/nextjs/server";
  */
 export async function requireAdmin(): Promise<string | null> {
   const { userId } = await auth();
-  const adminUserId = process.env.ADMIN_USER_ID;
-
-  if (!userId || !adminUserId || userId !== adminUserId) {
+  if (!isAdminUserId(userId)) {
     return null;
   }
   return userId;

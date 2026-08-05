@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { isAdminUserId } from "@/lib/admin/requireAdmin";
 import { NavHeader } from "./NavHeader";
 import { Sidebar } from "./Sidebar";
 import { TimezoneSync } from "./TimezoneSync";
@@ -33,7 +34,7 @@ export default async function ReaderLayout({ children }: { children: React.React
   return (
     <div className="flex h-screen flex-col">
       <TimezoneSync currentTimezone={user?.timezone ?? null} />
-      <NavHeader sessions={sessions} />
+      <NavHeader sessions={sessions} isAdmin={isAdminUserId(userId)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar sessions={sessions} />
         <main className="flex-1 overflow-y-auto">{children}</main>

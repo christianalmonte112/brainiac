@@ -7,6 +7,8 @@ import { MobileMenuButton } from "./MobileMenuButton";
 interface NavHeaderProps {
   /** Optional: callers without a session library (e.g. the Community shell, which deliberately has no reading-session concept) can omit this — the mobile drawer falls back to SessionList's existing empty state. */
   sessions?: ReadingSession[];
+  /** When true, show an Admin link (owner account only — computed server-side). */
+  isAdmin?: boolean;
 }
 
 /**
@@ -19,11 +21,11 @@ interface NavHeaderProps {
  * there since the persistent Sidebar is hidden at the same breakpoint —
  * see Sidebar.tsx and layout.tsx).
  */
-export function NavHeader({ sessions = [] }: NavHeaderProps) {
+export function NavHeader({ sessions = [], isAdmin = false }: NavHeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 sm:px-6">
       <div className="flex items-center gap-3 sm:gap-6">
-        <MobileMenuButton sessions={sessions} />
+        <MobileMenuButton sessions={sessions} isAdmin={isAdmin} />
         <Link href="/reader" className="flex items-center gap-2 text-lg font-bold text-slate-900">
           <BrainLogo size={28} className="h-7 w-7 shrink-0" />
           Brainiac
@@ -41,6 +43,11 @@ export function NavHeader({ sessions = [] }: NavHeaderProps) {
           <Link href="/community" className="hover:text-slate-900">
             Community
           </Link>
+          {isAdmin && (
+            <Link href="/admin" className="hover:text-slate-900">
+              Admin
+            </Link>
+          )}
         </nav>
       </div>
       <UserButton />

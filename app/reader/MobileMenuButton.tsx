@@ -8,6 +8,7 @@ import { SessionList } from "./SessionList";
 
 interface MobileMenuButtonProps {
   sessions: ReadingSession[];
+  isAdmin?: boolean;
 }
 
 const NAV_LINKS = [
@@ -31,8 +32,9 @@ const NAV_LINKS = [
  * and an Escape-key handler, since a full navigation drawer benefits from
  * both more than a single-word definition panel does.
  */
-export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
+export function MobileMenuButton({ sessions, isAdmin = false }: MobileMenuButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const links = isAdmin ? [...NAV_LINKS, { href: "/admin", label: "Admin" }] : NAV_LINKS;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,7 +83,7 @@ export function MobileMenuButton({ sessions }: MobileMenuButtonProps) {
         </div>
 
         <nav className="flex flex-col gap-1 border-b border-slate-100 pb-4 text-sm font-medium text-slate-700">
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
