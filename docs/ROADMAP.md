@@ -133,8 +133,8 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | Feedback widget | P2 | ✅ Shipped — floating widget on reader routes; admin inbox at `/admin/feedback`; rate-limited via Upstash `feedback` tier |
 | Beta user invite list | P1 | ✅ Shipped — admin allowlist at `/admin/invites`; Clerk `user.created` webhook accepts PENDING invites and bans everyone else |
 | Admin users roster | P2 | ✅ Shipped — `/admin/users` + Admin nav link for `ADMIN_USER_ID` only |
-| E2E tests with Playwright + Clerk | P2 | Auth and core flow coverage |
-| Performance testing | P1 | Load test AI endpoints |
+| E2E tests with Playwright + Clerk | P2 | 🚧 Draft scaffolding — `tests/e2e/` + `@clerk/testing`; needs fixture user + first green local run (see `tests/e2e/README.md`). Not wired into CI yet. |
+| Performance testing | P1 | 🚧 Draft — `npm run load-test` (autocannon on public routes only; refuses production unless overridden). Authenticated / AI routes intentionally excluded. |
 
 **Exit criteria:** 10–50 beta users completing full sessions without critical bugs.
 
@@ -185,7 +185,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 | Prisma client singleton for serverless | Phase 2 | ✅ Done |
 | `BaselineAssessment` migration | Phase 2 | ✅ Done |
 | Remove temporary `as any` cast in `actions.ts` after AI scoring migration | Phase 3 | ✅ Done |
-| E2E tests with Playwright + Clerk testing | Phase 5 | 🔲 Pending |
+| E2E tests with Playwright + Clerk testing | Phase 5 | 🚧 Draft scaffolding in repo; first green run + CI wiring still open |
 | CI pipeline (lint, typecheck, migrate) | Phase 5 | 🔲 Pending |
 
 ---
