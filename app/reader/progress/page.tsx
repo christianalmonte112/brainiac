@@ -48,8 +48,10 @@ function scoreBadgeClass(pct: number): string {
 /** F-006 progress dashboard — stats, learning insights, baseline comparison, growth chart. */
 export default async function ProgressPage() {
   const { userId } = await auth();
-  // Per-request so a warm Node process doesn't freeze the window at module load.
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
+  // Per-request (same pattern as admin page) so a warm process doesn't freeze
+  // the window at module load. Avoid Date.now() here — react-hooks/purity flags it.
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const [
     baseline,
