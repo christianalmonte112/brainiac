@@ -132,6 +132,7 @@ Brainiac becomes the go-to tool for **active reading** — where every reading s
 | Monthly progress report vs. baseline | P1 | ✅ Shipped (in-app) — `/reader/progress/monthly` compares this calendar month vs baseline; email digest still backlog |
 | Feedback widget | P2 | ✅ Shipped — floating widget on reader routes; admin inbox at `/admin/feedback`; rate-limited via Upstash `feedback` tier |
 | Beta user invite list | P1 | ✅ Shipped — admin allowlist at `/admin/invites`; Clerk `user.created` webhook accepts PENDING invites and bans everyone else |
+| Admin users roster | P2 | ✅ Shipped — `/admin/users` + Admin nav link for `ADMIN_USER_ID` only |
 | E2E tests with Playwright + Clerk | P2 | Auth and core flow coverage |
 | Performance testing | P1 | Load test AI endpoints |
 
@@ -162,7 +163,7 @@ Prioritized ideas for after beta launch. Not committed to dates.
 | Custom quiz difficulty | Medium | Low |
 | Tags and folders for sessions | Medium | Medium |
 | Browser extension (clip to Brainiac) | High | High |
-| API rate limiting per user tier | High | Medium |
+| Tiered API rate limits by subscription (base Upstash limits already shipped) | Medium | Medium |
 
 ### Long-term (2026+)
 

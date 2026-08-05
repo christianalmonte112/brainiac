@@ -1,11 +1,11 @@
 # Database Schema — Brainiac
 
-**Version:** 1.0  
-**Last updated:** June 2025  
+**Version:** 1.1  
+**Last updated:** August 2026  
 **ORM:** Prisma  
 **Database:** PostgreSQL (Supabase)
 
-This document describes the data model for Brainiac. The canonical source is `prisma/schema.prisma` once implemented.
+This document summarizes the data model for Brainiac. The canonical source is always [`prisma/schema.prisma`](../prisma/schema.prisma).
 
 ---
 
@@ -15,15 +15,40 @@ This document describes the data model for Brainiac. The canonical source is `pr
 erDiagram
     User ||--o{ ReadingSession : owns
     User ||--o| BaselineAssessment : has
+    User ||--o| Subscription : has
+    User ||--o{ VocabularyWord : looks_up
+    User ||--o{ VocabularyReview : reviews
+    User ||--o{ QuizAttempt : submits
+    User ||--o{ VisualGameAttempt : plays
+    User ||--o{ ListeningGame : creates
+    User ||--o{ ListeningAttempt : plays
+    User ||--o{ Badge : earns
+    User ||--o{ CommunityPost : authors
+    User ||--o{ CommunityComment : writes
+    User ||--o{ Feedback : submits
+    User ||--o{ HighlightInteraction : highlights
     ReadingSession ||--o| Summary : has
     ReadingSession ||--o{ Quiz : has
+    ReadingSession ||--o{ ChunkSummary : has
+    ReadingSession ||--o{ TutorMessage : has
+    ReadingSession ||--o{ VisualGame : has
+    ReadingSession ||--o{ VocabularyWord : sources
+    ReadingSession ||--o{ HighlightInteraction : has
     Quiz ||--|{ Question : contains
     Quiz ||--o{ QuizAttempt : receives
+    VocabularyWord ||--o| VocabularyReview : schedules
+    VisualGame ||--|{ VisualGameItem : contains
+    VisualGame ||--o{ VisualGameAttempt : receives
+    ListeningGame ||--|{ ListeningSegment : contains
+    ListeningGame ||--o{ ListeningAttempt : receives
+    CommunityPost ||--o{ CommunityComment : has
 
     User {
         string id PK "Clerk userId"
         string email
         string name
+        string preferredLanguage
+        string timezone
         datetime createdAt
         datetime updatedAt
     }
@@ -48,6 +73,8 @@ erDiagram
         int wordCount
         string sourceUrl
         enum status
+        int currentChunkIndex
+        int elapsedSeconds
         datetime createdAt
         datetime updatedAt
         datetime completedAt
@@ -92,6 +119,14 @@ erDiagram
         int totalCount
         datetime createdAt
     }
+
+    Invite {
+        string id PK
+        string email UK
+        enum status
+        datetime createdAt
+        datetime acceptedAt
+    }
 ```
 
 ---
@@ -100,7 +135,7 @@ erDiagram
 
 ### 2.1 User
 
-Mirrors Clerk user identity. Created on first sign-in or via Clerk webhook.
+Mirrors Clerk user identity. Created via Clerk webhook on `user.created` / `user.updated` (and ensured on first authenticated flow if needed).
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -108,10 +143,11 @@ Mirrors Clerk user identity. Created on first sign-in or via Clerk webhook.
 | `email` | `String` | Unique, optional | Primary email from Clerk |
 | `name` | `String` | Optional | Display name |
 | `preferredLanguage` | `String` | Default `"en"` | BCP-47 tag set on language selection screen (F-011) |
+| `timezone` | `String` | Optional | IANA zone from client `TimezoneSync` — streak / progress calendar days |
 | `createdAt` | `DateTime` | Default now | First seen |
 | `updatedAt` | `DateTime` | Auto | Last updated |
 
-**Relations:** `readingSessions`, `quizAttempts`, `baselineAssessment`
+**Relations:** `readingSessions`, `quizAttempts`, `baselineAssessment`, `vocabularyWords`, `vocabularyReviews`, `highlightInteractions`, `visualGameAttempts`, `listeningGames`, `listeningAttempts`, `badges`, `communityPosts`, `communityComments`, `subscription`, `feedback`
 
 ---
 
@@ -149,13 +185,15 @@ Core entity representing one reading unit.
 | `wordCount` | `Int` | Optional | Computed on save |
 | `sourceUrl` | `String` | Optional | Original URL if imported |
 | `status` | `SessionStatus` | Default `DRAFT` | Lifecycle state |
+| `currentChunkIndex` | `Int` | Default `0` | Next unread chunk (F-002); chunks derived at render time |
+| `elapsedSeconds` | `Int` | Default `0` | Accrued active reading time (F-005), client-reported / server-clamped |
 | `createdAt` | `DateTime` | Default now | Created |
 | `updatedAt` | `DateTime` | Auto | Updated |
-| `completedAt` | `DateTime` | Optional | When quiz completed |
+| `completedAt` | `DateTime` | Optional | When session completed |
 
 **Enum `SessionStatus`:** `DRAFT`, `ACTIVE`, `COMPLETED`, `ARCHIVED`
 
-**Relations:** `user`, `summary`, `quizzes`
+**Relations:** `user`, `summary`, `quizzes`, `chunkSummaries`, `vocabularyWords`, `highlightInteractions`, `tutorMessages`, `visualGames`
 
 **Indexes:**
 - `(userId, createdAt DESC)` — dashboard listing
@@ -237,144 +275,35 @@ Records one user submission for a quiz.
 
 ---
 
+### 2.8 ChunkSummary / VocabularyWord / HighlightInteraction / TutorMessage
+
+Shipped reading-session satellites (see `prisma/schema.prisma` for full columns):
+
+- **ChunkSummary** — per-chunk micro-summary or keywords (F-003); advances `currentChunkIndex`; optional `aiScore` / `aiFeedback`
+- **VocabularyWord** — dictionary lookup cache, unique per `(userId, word)` (F-004)
+- **HighlightInteraction** — fire-and-forget log of Highlight Tutor invocations (F-019)
+- **TutorMessage** — Socratic tutor turns (`USER` / `TUTOR`) for analytics / personalization
+
+---
+
+### 2.9 Subscription / Badge
+
+- **Subscription** — Stripe state for Premium (`NONE` → `ACTIVE` / `TRIALING` / …); synced via `/api/stripe/webhook`
+- **Badge** — permanently earned achievements (F-021); `key` from `lib/badges/definitions.ts`, unique per `(userId, key)`
+
+---
+
 ## 3. Prisma Schema (Reference)
 
-```prisma
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-enum SessionStatus {
-  DRAFT
-  ACTIVE
-  COMPLETED
-  ARCHIVED
-}
-
-enum SummaryDepth {
-  BRIEF
-  STANDARD
-  DETAILED
-}
-
-model User {
-  id                 String              @id
-  email              String?             @unique
-  name               String?
-  preferredLanguage  String              @default("en")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  readingSessions    ReadingSession[]
-  quizAttempts       QuizAttempt[]
-  baselineAssessment BaselineAssessment?
-}
-
-model BaselineAssessment {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  readingSpeedWPM    Int
-  comprehensionScore Float
-  vocabularyScore    Float
-  inferenceScore     Float
-  overallScore       Float
-  takenAt            DateTime
-  createdAt          DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ReadingSession {
-  id          String        @id @default(cuid())
-  userId      String
-  title       String
-  sourceText  String        @db.Text
-  wordCount   Int?
-  sourceUrl   String?
-  status      SessionStatus @default(DRAFT)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  completedAt DateTime?
-
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  summary  Summary?
-  quizzes  Quiz[]
-
-  @@index([userId, createdAt(sort: Desc)])
-  @@index([userId, status])
-}
-
-model Summary {
-  id               String       @id @default(cuid())
-  sessionId        String       @unique
-  depth            SummaryDepth
-  content          String       @db.Text
-  model            String
-  promptTokens     Int?
-  completionTokens Int?
-  createdAt        DateTime     @default(now())
-
-  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-}
-
-model Quiz {
-  id            String        @id @default(cuid())
-  sessionId     String
-  questionCount Int
-  model         String
-  createdAt     DateTime      @default(now())
-
-  session   ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  QuizAttempt[]
-
-  @@index([sessionId])
-}
-
-model Question {
-  id           String @id @default(cuid())
-  quizId       String
-  orderIndex   Int
-  prompt       String @db.Text
-  options      Json
-  correctIndex Int
-  explanation  String? @db.Text
-
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-
-  @@index([quizId, orderIndex])
-}
-
-model QuizAttempt {
-  id           String   @id @default(cuid())
-  quizId       String
-  userId       String
-  answers      Json
-  score        Float
-  correctCount Int
-  totalCount   Int
-  createdAt    DateTime @default(now())
-
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt(sort: Desc)])
-  @@index([quizId, userId])
-}
-```
+Do not duplicate the full schema here — it drifts. Open [`prisma/schema.prisma`](../prisma/schema.prisma) for enums, indexes, and every model. After schema changes, run `npx prisma migrate dev` and keep this doc’s ERD / section summaries in sync.
 
 ---
 
 ## 4. Migration Strategy
 
-1. **Initial migration** — Create all tables above
-2. **User sync** — Clerk webhook creates/updates `User` on `user.created` / `user.updated`
-3. **Production** — `npx prisma migrate deploy` in CI before or after Vercel deploy
+1. **Migrations** — Live under `prisma/migrations/`; apply with Prisma CLI
+2. **User sync** — Clerk webhook creates/updates `User` on `user.created` / `user.updated` (also enforces beta invites)
+3. **Production** — `npx prisma migrate deploy` against the production DB (before or after Vercel deploy)
 4. **Local dev** — `npx prisma migrate dev`
 
 ### Supabase Connection URLs
@@ -393,9 +322,10 @@ DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabas
 
 | Event | Behavior |
 |-------|----------|
-| User deletes session | Cascade delete summary, quizzes, questions, attempts |
-| User deletes account (Clerk) | Webhook triggers cascade delete of all user data |
+| User deletes session | Cascade delete summary, quizzes, questions, attempts, chunk summaries, tutor messages, visual games, related highlights |
+| User deletes account (Clerk) | Cascade delete of all user-owned rows via Prisma `onDelete: Cascade` |
 | Session archived | Soft status change; excluded from default dashboard query |
+| Pending invite revoked | Row deleted (not soft-`REVOKED`) — see §11 |
 
 ---
 
@@ -442,14 +372,15 @@ prisma.quizAttempt.aggregate({
 
 ## 7. Future Schema Extensions
 
+Shipped items (baseline, vocabulary SRS, highlight tutor log, Stripe subscription, badges, feedback, invites) live in §§2 / 8–11 — not listed here.
+
 | Feature | Proposed Model |
 |---------|----------------|
-| Baseline assessment | `BaselineAssessment` — planned Phase 2 (F-017) |
-| Reading streaks | `Streak` or computed from `QuizAttempt.createdAt` |
+| Reading streaks | Still computed from session / quiz activity + `User.timezone` (no `Streak` table yet) |
 | Tags / folders | `Tag`, `SessionTag` join table |
-| Spaced repetition | `ReviewSchedule` linked to `Question` |
 | Uploaded files | `FileAsset` with Supabase Storage URL |
-| Annotations | `Highlight` on `ReadingSession` |
+| Feedback triage | Optional `status` / assignee columns on `Feedback` if volume grows |
+| Soft-delete comments | `deletedAt` on `CommunityComment` if mid-thread deletes must preserve replies |
 
 ---
 
@@ -487,4 +418,4 @@ Free-text beta feedback from the floating reader widget (`app/reader/FeedbackWid
 
 ### Invite
 
-Allowlist email for invite-only signup. `email` is unique and stored lowercased. Statuses: `PENDING` → `ACCEPTED` (on Clerk `user.created` when the email matches) or removed on revoke. No FK to `User` — the invite exists before any account. Enforced in `app/api/clerk/webhook/route.ts` (ban uninvited Clerk users).
+Allowlist email for invite-only signup. `email` is unique and stored lowercased. Statuses in use: `PENDING` → `ACCEPTED` on Clerk `user.created` when the email matches. Revoking a pending invite **deletes** the row (`revokeInvite`); the `InviteStatus.REVOKED` enum value exists in Prisma but is unused. No FK to `User` — the invite exists before any account. Enforced in `app/api/clerk/webhook/route.ts` (ban uninvited Clerk users).
