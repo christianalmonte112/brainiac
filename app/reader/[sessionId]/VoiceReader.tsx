@@ -29,12 +29,25 @@ function loadBrowserVoices(): VoiceOption[] {
   }));
 }
 
+/** Active cancel-pulse from a prior hard-stop — must be cleared before speaking again. */
+let stopPulseTimer: number | null = null;
+
+function clearSpeechStopPulse() {
+  if (stopPulseTimer !== null) {
+    window.clearInterval(stopPulseTimer);
+    stopPulseTimer = null;
+  }
+}
+
 /**
  * Chromium often ignores a single speechSynthesis.cancel() while speaking.
- * Resume (unstick) + cancel + silent flush + short cancel pulse reliably stops it.
+ * Resume (unstick) + cancel + optional short cancel pulse stops it.
+ * Call with `pulse: false` (or clearSpeechStopPulse) before starting a new utterance,
+ * otherwise the pulse will kill the new speech.
  */
-function hardStopSpeechSynthesis() {
+function hardStopSpeechSynthesis({ pulse = true }: { pulse?: boolean } = {}) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  clearSpeechStopPulse();
   const synth = window.speechSynthesis;
 
   try {
@@ -44,18 +57,10 @@ function hardStopSpeechSynthesis() {
   }
   synth.cancel();
 
-  try {
-    const flush = new SpeechSynthesisUtterance("\u200B");
-    flush.volume = 0;
-    flush.rate = 10;
-    synth.speak(flush);
-    synth.cancel();
-  } catch {
-    // ignore
-  }
+  if (!pulse) return;
 
   let ticks = 0;
-  const timer = window.setInterval(() => {
+  stopPulseTimer = window.setInterval(() => {
     try {
       window.speechSynthesis.cancel();
     } catch {
@@ -63,7 +68,7 @@ function hardStopSpeechSynthesis() {
     }
     ticks += 1;
     if (!window.speechSynthesis.speaking || ticks >= 12) {
-      window.clearInterval(timer);
+      clearSpeechStopPulse();
     }
   }, 40);
 }
@@ -196,7 +201,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
 
   function stopBrowserSpeech({ keepPosition = false }: { keepPosition?: boolean } = {}) {
     speakGenerationRef.current += 1;
-    hardStopSpeechSynthesis();
+    hardStopSpeechSynthesis({ pulse: true });
     utteranceRef.current = null;
     setIsPlaying(false);
     if (!keepPosition) {
@@ -243,8 +248,9 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       return;
     }
 
-    // Hard-stop anything already speaking, then start a new generation.
-    hardStopSpeechSynthesis();
+    // Clear any prior stop-pulse (it would cancel this utterance), then soft-cancel.
+    clearSpeechStopPulse();
+    hardStopSpeechSynthesis({ pulse: false });
     const generation = ++speakGenerationRef.current;
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -264,7 +270,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     };
     utterance.onstart = () => {
       if (generation !== speakGenerationRef.current) {
-        hardStopSpeechSynthesis();
+        hardStopSpeechSynthesis({ pulse: true });
         return;
       }
       browserPausedRef.current = false;
@@ -285,6 +291,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       // "interrupted" / "canceled" is expected when pausing/stopping.
       if (event.error === "interrupted" || event.error === "canceled") return;
       setIsPlaying(false);
+      setIsBrowserPaused(false);
       utteranceRef.current = null;
       setError("Browser speech failed. Try another voice or enable ElevenLabs on Preview.");
     };
@@ -294,7 +301,13 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     setIsBrowserPaused(false);
     // Optimistic UI so Pause/Stop appear immediately (onstart can lag).
     setIsPlaying(true);
-    window.speechSynthesis.speak(utterance);
+
+    // Let cancel settle so Chromium doesn't drop the new utterance.
+    window.setTimeout(() => {
+      if (generation !== speakGenerationRef.current) return;
+      clearSpeechStopPulse();
+      window.speechSynthesis.speak(utterance);
+    }, 80);
   }
 
   function pauseBrowserSpeech() {
@@ -318,7 +331,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       }
       // Chrome path: hard stop and resume later from charIndex.
       speakGenerationRef.current += 1;
-      hardStopSpeechSynthesis();
+      hardStopSpeechSynthesis({ pulse: true });
       utteranceRef.current = null;
     }, 30);
   }
