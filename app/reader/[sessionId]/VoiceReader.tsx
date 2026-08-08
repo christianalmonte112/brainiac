@@ -29,6 +29,45 @@ function loadBrowserVoices(): VoiceOption[] {
   }));
 }
 
+/**
+ * Chromium often ignores a single speechSynthesis.cancel() while speaking.
+ * Resume (unstick) + cancel + silent flush + short cancel pulse reliably stops it.
+ */
+function hardStopSpeechSynthesis() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const synth = window.speechSynthesis;
+
+  try {
+    if (synth.paused) synth.resume();
+  } catch {
+    // ignore
+  }
+  synth.cancel();
+
+  try {
+    const flush = new SpeechSynthesisUtterance("\u200B");
+    flush.volume = 0;
+    flush.rate = 10;
+    synth.speak(flush);
+    synth.cancel();
+  } catch {
+    // ignore
+  }
+
+  let ticks = 0;
+  const timer = window.setInterval(() => {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // ignore
+    }
+    ticks += 1;
+    if (!window.speechSynthesis.speaking || ticks >= 12) {
+      window.clearInterval(timer);
+    }
+  }, 40);
+}
+
 export function VoiceReader({ chunkText }: VoiceReaderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const generateAbortRef = useRef<AbortController | null>(null);
@@ -37,6 +76,8 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
   /** Char offset for Chrome-safe pause/resume (native pause() is broken in Chromium). */
   const browserCharIndexRef = useRef(0);
   const browserPausedRef = useRef(false);
+  /** Bumped on every stop/start so late utterance callbacks can't revive UI after stop. */
+  const speakGenerationRef = useRef(0);
 
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_ID);
@@ -127,7 +168,7 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       cancelled = true;
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
-        window.speechSynthesis.cancel();
+        hardStopSpeechSynthesis();
       }
     };
   }, []);
@@ -154,9 +195,8 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
   }
 
   function stopBrowserSpeech({ keepPosition = false }: { keepPosition?: boolean } = {}) {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
+    speakGenerationRef.current += 1;
+    hardStopSpeechSynthesis();
     utteranceRef.current = null;
     setIsPlaying(false);
     if (!keepPosition) {
@@ -203,8 +243,10 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       return;
     }
 
-    // Cancel any in-flight utterance without wiping our resume offset.
-    window.speechSynthesis.cancel();
+    // Hard-stop anything already speaking, then start a new generation.
+    hardStopSpeechSynthesis();
+    const generation = ++speakGenerationRef.current;
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = playbackRate;
 
@@ -215,16 +257,22 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     if (match) utterance.voice = match;
 
     utterance.onboundary = (event) => {
+      if (generation !== speakGenerationRef.current) return;
       if (typeof event.charIndex === "number") {
         browserCharIndexRef.current = fromCharIndex + event.charIndex;
       }
     };
     utterance.onstart = () => {
+      if (generation !== speakGenerationRef.current) {
+        hardStopSpeechSynthesis();
+        return;
+      }
       browserPausedRef.current = false;
       setIsBrowserPaused(false);
       setIsPlaying(true);
     };
     utterance.onend = () => {
+      if (generation !== speakGenerationRef.current) return;
       // onend also fires after cancel() — ignore if we paused intentionally.
       if (browserPausedRef.current) return;
       browserCharIndexRef.current = 0;
@@ -233,7 +281,8 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       utteranceRef.current = null;
     };
     utterance.onerror = (event) => {
-      // "interrupted" / "canceled" is expected when pausing.
+      if (generation !== speakGenerationRef.current) return;
+      // "interrupted" / "canceled" is expected when pausing/stopping.
       if (event.error === "interrupted" || event.error === "canceled") return;
       setIsPlaying(false);
       utteranceRef.current = null;
@@ -241,6 +290,10 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     };
 
     utteranceRef.current = utterance;
+    browserPausedRef.current = false;
+    setIsBrowserPaused(false);
+    // Optimistic UI so Pause/Stop appear immediately (onstart can lag).
+    setIsPlaying(true);
     window.speechSynthesis.speak(utterance);
   }
 
@@ -251,18 +304,23 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
     setIsBrowserPaused(true);
     setIsPlaying(false);
 
-    // Prefer native pause when it works (Safari/Firefox).
-    window.speechSynthesis.pause();
+    // Native pause when it works (Safari/Firefox); Chromium needs hard cancel.
+    try {
+      window.speechSynthesis.pause();
+    } catch {
+      // ignore
+    }
 
-    // Chromium often ignores pause() — fall back to cancel + resume-from-charIndex.
     window.setTimeout(() => {
       const synth = window.speechSynthesis;
-      if (synth.speaking && !synth.paused) {
-        synth.cancel();
-      } else if (synth.paused) {
-        // Native pause worked — keep playing=false, paused=true.
+      if (synth.paused) {
+        return; // Safari/Firefox native pause worked
       }
-    }, 40);
+      // Chrome path: hard stop and resume later from charIndex.
+      speakGenerationRef.current += 1;
+      hardStopSpeechSynthesis();
+      utteranceRef.current = null;
+    }, 30);
   }
 
   function resumeBrowserSpeech() {
@@ -273,8 +331,12 @@ export function VoiceReader({ chunkText }: VoiceReaderProps) {
       browserPausedRef.current = false;
       setIsBrowserPaused(false);
       setIsPlaying(true);
-      synth.resume();
-      return;
+      try {
+        synth.resume();
+        return;
+      } catch {
+        // fall through to charIndex resume
+      }
     }
 
     speakWithBrowser(browserCharIndexRef.current);
