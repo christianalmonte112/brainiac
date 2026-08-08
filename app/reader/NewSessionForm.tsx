@@ -1,13 +1,15 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import { countWords } from "@/lib/text/word-count";
+import { OPEN_NEW_DOCUMENT_EVENT, type OpenNewDocumentDetail } from "@/lib/reader/newDocumentEvents";
 import { createReadingSession, type CreateSessionActionState } from "./actions";
 import { ImagePageUpload } from "./ImagePageUpload";
 
 const initialState: CreateSessionActionState = {};
 
-/** Collapsible "new document" form with a live word count. */
+/** Collapsible "new document" form — black CTA (ChatGPT mock). */
 export function NewSessionForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMode, setInputMode] = useState<"paste" | "photos">("paste");
@@ -15,37 +17,48 @@ export function NewSessionForm() {
   const [state, formAction, isPending] = useActionState(createReadingSession, initialState);
   const wordCount = useMemo(() => countWords(sourceText), [sourceText]);
 
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const detail = (e as CustomEvent<OpenNewDocumentDetail>).detail;
+      if (detail?.mode) setInputMode(detail.mode);
+      setIsOpen(true);
+    }
+    window.addEventListener(OPEN_NEW_DOCUMENT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_NEW_DOCUMENT_EVENT, onOpen);
+  }, []);
+
   if (!isOpen) {
     return (
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-sm border border-slate-900 bg-white py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-900 transition-all hover:bg-slate-900 hover:text-white"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-black px-4 text-sm font-medium text-white transition-all duration-180 hover:-translate-y-0.5 hover:bg-neutral-900 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" d="M12 5v14M5 12h14" />
-        </svg>
+        <Plus className="h-4 w-4" strokeWidth={2} />
         New Document
       </button>
     );
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05)]"
+    >
       <input
         name="title"
         placeholder="Title"
         required
         maxLength={200}
-        className="rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+        className="rounded-xl border border-neutral-200 px-3 py-2 text-sm text-black focus:border-neutral-400 focus:outline-none"
       />
 
       <div className="flex gap-2 text-xs">
         <button
           type="button"
           onClick={() => setInputMode("paste")}
-          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
-            inputMode === "paste" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
+            inputMode === "paste" ? "bg-black text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
           }`}
         >
           Paste text
@@ -53,11 +66,11 @@ export function NewSessionForm() {
         <button
           type="button"
           onClick={() => setInputMode("photos")}
-          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
-            inputMode === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
+            inputMode === "photos" ? "bg-black text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
           }`}
         >
-          📷 Upload photos
+          Upload photos
         </button>
       </div>
 
@@ -76,9 +89,9 @@ export function NewSessionForm() {
         rows={6}
         value={sourceText}
         onChange={(e) => setSourceText(e.target.value)}
-        className="resize-none rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-slate-400 focus:outline-none"
+        className="resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm text-black focus:border-neutral-400 focus:outline-none"
       />
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs text-neutral-500">
         <span>{wordCount} words</span>
         {state.error && <span className="text-red-600">{state.error}</span>}
       </div>
@@ -86,14 +99,14 @@ export function NewSessionForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex-1 rounded-xl bg-black px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-900 disabled:cursor-not-allowed disabled:bg-neutral-300"
         >
           {isPending ? "Saving..." : "Save"}
         </button>
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          className="rounded-xl px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
         >
           Cancel
         </button>

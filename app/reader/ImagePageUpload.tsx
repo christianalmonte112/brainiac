@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { compressPageImage } from "@/lib/reader/compressPageImage";
+import { ocrPageImages } from "@/lib/reader/ocrPageImages";
 
 interface ImagePageUploadProps {
   /** Called with the transcribed text once extraction succeeds. Replaces the
@@ -11,7 +13,9 @@ interface ImagePageUploadProps {
   disabled?: boolean;
 }
 
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
+const ACCEPTED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
+const FILE_PICKER_ACCEPT = [...ACCEPTED_TYPES, ...ACCEPTED_EXTENSIONS].join(",");
 const MAX_IMAGES = 10;
 
 interface SelectedImage {
@@ -19,10 +23,18 @@ interface SelectedImage {
   previewUrl: string;
 }
 
+function isAcceptedImage(file: File): boolean {
+  if (ACCEPTED_TYPES.includes(file.type)) return true;
+  // iOS often leaves File.type empty for HEIC / camera rolls.
+  const name = file.name.toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
 export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<SelectedImage[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleFilesSelected(fileList: FileList | null) {
@@ -30,8 +42,8 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     setError(null);
 
     const incoming = Array.from(fileList);
-    const rejected = incoming.filter((file) => !ACCEPTED_TYPES.includes(file.type));
-    const accepted = incoming.filter((file) => ACCEPTED_TYPES.includes(file.type));
+    const rejected = incoming.filter((file) => !isAcceptedImage(file));
+    const accepted = incoming.filter((file) => isAcceptedImage(file));
 
     setImages((prev) => {
       const combined = [...prev, ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))];
@@ -43,7 +55,9 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     });
 
     if (rejected.length > 0) {
-      setError(`${rejected.length} file(s) skipped — only JPEG, PNG, WebP, and GIF photos are supported.`);
+      setError(
+        `${rejected.length} file(s) skipped — use JPEG, PNG, WebP, or GIF (HEIC works in Safari; otherwise export as JPEG).`,
+      );
     }
 
     // Allow re-selecting the same file(s) again later.
@@ -63,27 +77,23 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     if (images.length === 0) return;
     setIsExtracting(true);
     setError(null);
+    setStatusLabel("Preparing photos…");
 
     try {
-      const body = new FormData();
+      const prepared: File[] = [];
       for (const { file } of images) {
-        body.append("images", file);
+        prepared.push(await compressPageImage(file));
       }
 
-      const response = await fetch("/api/vision/extract", { method: "POST", body });
-      const data = (await response.json()) as { text?: string; error?: string };
-
-      if (!response.ok || !data.text) {
-        throw new Error(data.error ?? `HTTP ${response.status}`);
-      }
-
-      onExtracted(data.text);
+      const text = await ocrPageImages(prepared, setStatusLabel);
+      onExtracted(text);
       for (const { previewUrl } of images) URL.revokeObjectURL(previewUrl);
       setImages([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't extract text from those photos. Please try again.");
     } finally {
       setIsExtracting(false);
+      setStatusLabel(null);
     }
   }
 
@@ -101,13 +111,15 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
         <input
           ref={fileInputRef}
           type="file"
-          accept={ACCEPTED_TYPES.join(",")}
+          accept={FILE_PICKER_ACCEPT}
           multiple
           onChange={(e) => handleFilesSelected(e.target.files)}
           className="hidden"
         />
         <span className="text-xs text-slate-500">
-          {images.length > 0 ? `${images.length} page${images.length === 1 ? "" : "s"} selected` : "Up to 10 pages, in order"}
+          {images.length > 0
+            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · free on-device OCR`
+            : "Up to 10 pages · free on-device OCR (no API key)"}
         </span>
       </div>
 
@@ -141,7 +153,9 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
           disabled={disabled || isExtracting}
           className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isExtracting ? "Reading photos…" : `Extract text from ${images.length} photo${images.length === 1 ? "" : "s"}`}
+          {isExtracting
+            ? (statusLabel ?? "Reading photos…")
+            : `Extract text from ${images.length} photo${images.length === 1 ? "" : "s"}`}
         </button>
       )}
 
