@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { compressPageImage } from "@/lib/reader/compressPageImage";
+import { preparePageImageForOcr } from "@/lib/reader/preparePageImageForOcr";
 import { ocrPageImages } from "@/lib/reader/ocrPageImages";
 
 interface ImagePageUploadProps {
@@ -82,7 +82,7 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     try {
       const prepared: File[] = [];
       for (const { file } of images) {
-        prepared.push(await compressPageImage(file));
+        prepared.push(await preparePageImageForOcr(file));
       }
 
       const text = await ocrPageImages(prepared, setStatusLabel);

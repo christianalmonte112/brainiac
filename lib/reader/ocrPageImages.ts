@@ -4,6 +4,8 @@
  * "verbatim reproduction" content filter.
  */
 
+import { normalizeOcrText } from "./normalizeOcrText";
+
 export async function ocrPageImages(
   files: File[],
   onProgress?: (label: string) => void,
@@ -12,11 +14,16 @@ export async function ocrPageImages(
     throw new Error("At least one image is required.");
   }
 
-  const { createWorker } = await import("tesseract.js");
+  const { createWorker, PSM } = await import("tesseract.js");
   onProgress?.("Loading OCR…");
   const worker = await createWorker("eng");
 
   try {
+    // Uniform text block — better for a photo of a book page than auto page segmentation.
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+    });
+
     const pages: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i]!;
@@ -26,11 +33,11 @@ export async function ocrPageImages(
       const {
         data: { text },
       } = await worker.recognize(file);
-      const cleaned = text.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").trim();
+      const cleaned = normalizeOcrText(text);
       if (cleaned) pages.push(cleaned);
     }
 
-    const joined = pages.join("\n\n").trim();
+    const joined = normalizeOcrText(pages.join("\n\n"));
     if (!joined) {
       throw new Error("Couldn't find any readable text in those photos. Try a clearer, well-lit shot.");
     }
