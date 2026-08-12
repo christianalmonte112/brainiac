@@ -80,8 +80,10 @@ export interface SubmitChunkSummaryResult {
   completed: boolean;
   /** Claude score 0–100. Only present when mode is "summary" and scoring succeeded. */
   aiScore?: number;
-  /** 1–2 sentence feedback from Claude. Present alongside aiScore. */
+  /** Feedback from Claude, or an unscored notice when scoringFailed is true. */
   aiFeedback?: string;
+  /** True when summary mode ran but Claude scoring failed — never a fake 0/100. */
+  scoringFailed?: boolean;
 }
 
 export interface SubmitChunkSummaryArgs {
@@ -157,19 +159,38 @@ export async function submitChunkSummary(args: SubmitChunkSummaryArgs): Promise<
     });
 
     try {
-      const { score, feedback } = await scoreChunkSummary(args.chunkText ?? "", parsed.summaryText);
+      const scored = await scoreChunkSummary(args.chunkText ?? "", parsed.summaryText);
 
+      if (scored.ok) {
+        if (chunkSummaryRecord) {
+          await prisma.chunkSummary.update({
+            where: { id: chunkSummaryRecord.id },
+            data: { aiScore: scored.score, aiFeedback: scored.feedback },
+          });
+        }
+
+        revalidatePath(`/reader/${parsed.sessionId}`);
+        return { completed, aiScore: scored.score, aiFeedback: scored.feedback };
+      }
+
+      // Leave aiScore null in the DB — do not persist a fake 0.
       if (chunkSummaryRecord) {
         await prisma.chunkSummary.update({
           where: { id: chunkSummaryRecord.id },
-          data: { aiScore: score, aiFeedback: feedback },
+          data: { aiScore: null, aiFeedback: scored.feedback },
         });
       }
 
       revalidatePath(`/reader/${parsed.sessionId}`);
-      return { completed, aiScore: score, aiFeedback: feedback };
+      return { completed, scoringFailed: true, aiFeedback: scored.feedback };
     } catch {
-      // Scoring failure is non-fatal — user still advances.
+      // Scoring failure is non-fatal — user still advances with an honest unscored state.
+      revalidatePath(`/reader/${parsed.sessionId}`);
+      return {
+        completed,
+        scoringFailed: true,
+        aiFeedback: "We couldn't score this summary right now. Your progress is saved — continue when you're ready.",
+      };
     }
   }
 
