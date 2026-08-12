@@ -1,17 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import { checkRateLimit } from "@/lib/ratelimit";
-import { extractTextFromImages, type ExtractableImageMediaType } from "@/lib/prompts/extractPageText";
+import { extractTextWithGoogleVision, isGoogleVisionConfigured } from "@/lib/google/visionOcr";
 
-// Claude vision on a book page can take 15–45s; default platform timeouts are too short.
 export const maxDuration = 60;
 
-// Client compresses to ~JPEG under ~500KB; stay under Vercel's ~4.5MB request body cap.
+// Client prepares images; stay under Vercel's ~4.5MB request body cap.
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
-const MAX_IMAGES = 10; // A chapter's worth of pages in one go; keeps request size/latency reasonable.
-const ACCEPTED_MEDIA_TYPES: ExtractableImageMediaType[] = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGES = 10;
+const ACCEPTED_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
-function isAcceptedMediaType(type: string): type is ExtractableImageMediaType {
-  return (ACCEPTED_MEDIA_TYPES as string[]).includes(type);
+type AcceptedMediaType = (typeof ACCEPTED_MEDIA_TYPES)[number];
+
+function isAcceptedMediaType(type: string): type is AcceptedMediaType {
+  return (ACCEPTED_MEDIA_TYPES as readonly string[]).includes(type);
 }
 
 export async function POST(request: Request) {
@@ -21,11 +22,21 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!isGoogleVisionConfigured()) {
+      return Response.json(
+        {
+          error: "Google Vision is not configured on this server.",
+          code: "VISION_NOT_CONFIGURED",
+        },
+        { status: 503 },
+      );
+    }
+
     try {
       const rateLimitResponse = await checkRateLimit("aiGeneration", userId);
       if (rateLimitResponse) return rateLimitResponse;
     } catch {
-      // Fail open if Upstash isn't configured on this deployment — extraction should still work.
+      // Fail open if Upstash isn't configured.
     }
 
     let formData: FormData;
@@ -50,7 +61,7 @@ export async function POST(request: Request) {
       }
       if (file.size > MAX_IMAGE_BYTES) {
         return Response.json(
-          { error: `${file.name} is too large after compression (3.5MB max per photo). Try a clearer, closer crop.` },
+          { error: `${file.name} is too large (3.5MB max per photo). Try a closer crop.` },
           { status: 400 },
         );
       }
@@ -65,11 +76,10 @@ export async function POST(request: Request) {
     const images = await Promise.all(
       files.map(async (file) => ({
         base64: Buffer.from(await file.arrayBuffer()).toString("base64"),
-        mediaType: file.type as ExtractableImageMediaType,
       })),
     );
 
-    const text = await extractTextFromImages(images);
+    const text = await extractTextWithGoogleVision(images);
 
     if (!text) {
       return Response.json(
@@ -78,19 +88,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return Response.json({ text, pagesProcessed: files.length });
+    return Response.json({ text, pagesProcessed: files.length, provider: "google-vision" });
   } catch (error) {
-    const raw = error instanceof Error ? error.message : "Text extraction failed";
-    // Anthropic blocks verbatim book OCR; surface a clear message if this route is still hit.
-    if (/content filtering policy/i.test(raw)) {
-      return Response.json(
-        {
-          error:
-            "Claude blocked reading that page (copyright filter). Use the on-device photo OCR in the app, or paste the text instead.",
-        },
-        { status: 422 },
-      );
-    }
-    return Response.json({ error: raw }, { status: 502 });
+    const message = error instanceof Error ? error.message : "Text extraction failed";
+    return Response.json({ error: message }, { status: 502 });
   }
 }

@@ -25,9 +25,25 @@ interface SelectedImage {
 
 function isAcceptedImage(file: File): boolean {
   if (ACCEPTED_TYPES.includes(file.type)) return true;
-  // iOS often leaves File.type empty for HEIC / camera rolls.
   const name = file.name.toLowerCase();
   return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
+async function readExtractResponse(response: Response): Promise<{
+  text?: string;
+  error?: string;
+  code?: string;
+  provider?: string;
+}> {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return { error: `Couldn't reach the text extractor (HTTP ${response.status || "unknown"}).` };
+  }
+  try {
+    return JSON.parse(raw) as { text?: string; error?: string; code?: string; provider?: string };
+  } catch {
+    return { error: `Text extraction failed (HTTP ${response.status}).` };
+  }
 }
 
 export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUploadProps) {
@@ -60,7 +76,6 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
       );
     }
 
-    // Allow re-selecting the same file(s) again later.
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -71,6 +86,27 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
       if (removed) URL.revokeObjectURL(removed.previewUrl);
       return next;
     });
+  }
+
+  async function extractWithGoogleVision(prepared: File[]): Promise<string | null> {
+    setStatusLabel("Reading with Google Vision…");
+    const body = new FormData();
+    for (const file of prepared) {
+      body.append("images", file);
+    }
+
+    const response = await fetch("/api/vision/extract", { method: "POST", body });
+    const data = await readExtractResponse(response);
+
+    if (data.code === "VISION_NOT_CONFIGURED" || response.status === 503) {
+      return null; // caller falls back to on-device OCR
+    }
+
+    if (!response.ok || !data.text) {
+      throw new Error(data.error ?? `HTTP ${response.status}`);
+    }
+
+    return data.text;
   }
 
   async function handleExtract() {
@@ -85,7 +121,19 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
         prepared.push(await preparePageImageForOcr(file));
       }
 
-      const text = await ocrPageImages(prepared, setStatusLabel);
+      let text: string | null = null;
+      try {
+        text = await extractWithGoogleVision(prepared);
+      } catch (err) {
+        // Network/API failure — try on-device OCR before surfacing the error.
+        console.warn("Google Vision extract failed, falling back to Tesseract:", err);
+      }
+
+      if (!text) {
+        setStatusLabel("Google Vision unavailable — using on-device OCR…");
+        text = await ocrPageImages(prepared, setStatusLabel);
+      }
+
       onExtracted(text);
       for (const { previewUrl } of images) URL.revokeObjectURL(previewUrl);
       setImages([]);
@@ -118,8 +166,8 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
         />
         <span className="text-xs text-slate-500">
           {images.length > 0
-            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · free on-device OCR`
-            : "Up to 10 pages · free on-device OCR (no API key)"}
+            ? `${images.length} page${images.length === 1 ? "" : "s"} selected · Google Vision OCR`
+            : "Up to 10 pages · Google Vision OCR (Tesseract fallback)"}
         </span>
       </div>
 
