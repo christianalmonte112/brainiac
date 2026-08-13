@@ -1,14 +1,64 @@
 /**
- * Client-side image prep for on-device Tesseract OCR.
- * Keeps higher resolution than the old upload compressor and applies a light
- * grayscale/contrast pass so phone photos of book pages read more cleanly.
+ * Client-side image prep for OCR.
+ * - Google Vision: keep color + EXIF orientation, mild downscale (Vision hates
+ *   the grayscale/contrast tricks that help Tesseract).
+ * - Tesseract: grayscale + contrast boost for on-device fallback.
  */
 
 import { scaledDimensions } from "./compressPageImage";
 
-/** Higher than the upload compressor — OCR quality needs the detail. */
 export const MAX_OCR_EDGE_PX = 2400;
+export const MAX_VISION_EDGE_PX = 2800;
 export const OCR_JPEG_QUALITY = 0.92;
+export const VISION_JPEG_QUALITY = 0.95;
+
+async function drawFileToCanvas(
+  file: File,
+  maxEdge: number,
+): Promise<{ canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }> {
+  let width: number;
+  let height: number;
+  let source: CanvasImageSource;
+
+  // Honor EXIF orientation so phone photos aren't sent sideways/upside-down.
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      ({ width, height } = scaledDimensions(bitmap.width, bitmap.height, maxEdge));
+      source = bitmap;
+    } catch {
+      source = await loadImageElement(file);
+      ({ width, height } = scaledDimensions(
+        (source as HTMLImageElement).naturalWidth,
+        (source as HTMLImageElement).naturalHeight,
+        maxEdge,
+      ));
+    }
+  } else {
+    source = await loadImageElement(file);
+    ({ width, height } = scaledDimensions(
+      (source as HTMLImageElement).naturalWidth,
+      (source as HTMLImageElement).naturalHeight,
+      maxEdge,
+    ));
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Couldn't prepare that photo for OCR.");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(source, 0, 0, width, height);
+
+  if (typeof ImageBitmap !== "undefined" && source instanceof ImageBitmap) {
+    source.close();
+  }
+
+  return { canvas, ctx };
+}
 
 async function loadImageElement(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
@@ -31,25 +81,28 @@ async function loadImageElement(file: File): Promise<HTMLImageElement> {
   }
 }
 
+async function canvasToJpegFile(canvas: HTMLCanvasElement, name: string, quality: number): Promise<File> {
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  if (!blob) throw new Error("Couldn't prepare that photo for OCR.");
+  const base = name.replace(/\.[^.]+$/, "") || "page";
+  return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+}
+
 /**
- * Downscale (mildly), convert to contrast-boosted grayscale JPEG for OCR.
+ * Color JPEG for Google Cloud Vision — no grayscale/contrast (those hurt Vision).
+ */
+export async function preparePageImageForGoogleVision(file: File): Promise<File> {
+  const { canvas } = await drawFileToCanvas(file, MAX_VISION_EDGE_PX);
+  return canvasToJpegFile(canvas, file.name, VISION_JPEG_QUALITY);
+}
+
+/**
+ * Grayscale + contrast for on-device Tesseract fallback.
  */
 export async function preparePageImageForOcr(file: File): Promise<File> {
-  const img = await loadImageElement(file);
-  const { width, height } = scaledDimensions(img.naturalWidth, img.naturalHeight, MAX_OCR_EDGE_PX);
+  const { canvas, ctx } = await drawFileToCanvas(file, MAX_OCR_EDGE_PX);
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Couldn't prepare that photo for OCR.");
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(img, 0, 0, width, height);
-
-  // Mild contrast boost in grayscale — helps Tesseract on dim phone photos.
-  const imageData = ctx.getImageData(0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
   const contrast = 1.25;
   const intercept = 128 * (1 - contrast);
@@ -66,11 +119,5 @@ export async function preparePageImageForOcr(file: File): Promise<File> {
   }
   ctx.putImageData(imageData, 0, 0);
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", OCR_JPEG_QUALITY),
-  );
-  if (!blob) throw new Error("Couldn't prepare that photo for OCR.");
-
-  const base = file.name.replace(/\.[^.]+$/, "") || "page";
-  return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+  return canvasToJpegFile(canvas, file.name, OCR_JPEG_QUALITY);
 }

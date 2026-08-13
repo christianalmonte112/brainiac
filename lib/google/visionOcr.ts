@@ -17,9 +17,18 @@ export function isGoogleVisionConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLOUD_VISION_API_KEY?.trim());
 }
 
+function pickText(item: NonNullable<VisionAnnotateResponse["responses"]>[number]): string {
+  return (
+    item.fullTextAnnotation?.text?.trim() ||
+    item.textAnnotations?.[0]?.description?.trim() ||
+    ""
+  );
+}
+
 /**
- * Extract printed text from one or more page photos via Google Cloud Vision
- * DOCUMENT_TEXT_DETECTION (dense document OCR — best for book pages).
+ * Extract printed text from one or more page photos via Google Cloud Vision.
+ * Requests DOCUMENT_TEXT_DETECTION (dense pages) and falls back to TEXT_DETECTION
+ * per image when document mode returns nothing.
  */
 export async function extractTextWithGoogleVision(images: VisionImageInput[]): Promise<string> {
   const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY?.trim();
@@ -38,7 +47,11 @@ export async function extractTextWithGoogleVision(images: VisionImageInput[]): P
     body: JSON.stringify({
       requests: images.map((image) => ({
         image: { content: image.base64 },
-        features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+        features: [
+          { type: "DOCUMENT_TEXT_DETECTION" },
+          { type: "TEXT_DETECTION" },
+        ],
+        imageContext: { languageHints: ["en"] },
       })),
     }),
   });
@@ -55,12 +68,10 @@ export async function extractTextWithGoogleVision(images: VisionImageInput[]): P
     if (item.error?.message) {
       throw new Error(item.error.message);
     }
-    const text =
-      item.fullTextAnnotation?.text?.trim() ||
-      item.textAnnotations?.[0]?.description?.trim() ||
-      "";
+    const text = pickText(item);
     if (text) pages.push(text);
   }
 
+  // Light reflow only — Vision already returns usable line breaks.
   return normalizeOcrText(pages.join("\n\n"));
 }

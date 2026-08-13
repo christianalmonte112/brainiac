@@ -1,8 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { preparePageImageForOcr } from "@/lib/reader/preparePageImageForOcr";
+import {
+  preparePageImageForGoogleVision,
+  preparePageImageForOcr,
+} from "@/lib/reader/preparePageImageForOcr";
 import { ocrPageImages } from "@/lib/reader/ocrPageImages";
+import { looksLikeGarbageOcr } from "@/lib/reader/ocrQuality";
 
 interface ImagePageUploadProps {
   /** Called with the transcribed text once extraction succeeds. Replaces the
@@ -116,22 +120,35 @@ export function ImagePageUpload({ onExtracted, disabled = false }: ImagePageUplo
     setStatusLabel("Preparing photos…");
 
     try {
-      const prepared: File[] = [];
+      // Color + EXIF-correct JPEGs for Google Vision (grayscale prep hurts Vision badly).
+      const forVision: File[] = [];
       for (const { file } of images) {
-        prepared.push(await preparePageImageForOcr(file));
+        forVision.push(await preparePageImageForGoogleVision(file));
       }
 
       let text: string | null = null;
       try {
-        text = await extractWithGoogleVision(prepared);
+        text = await extractWithGoogleVision(forVision);
+        if (text && looksLikeGarbageOcr(text)) {
+          console.warn("Google Vision returned low-quality text; trying on-device OCR.");
+          text = null;
+        }
       } catch (err) {
-        // Network/API failure — try on-device OCR before surfacing the error.
         console.warn("Google Vision extract failed, falling back to Tesseract:", err);
       }
 
       if (!text) {
-        setStatusLabel("Google Vision unavailable — using on-device OCR…");
-        text = await ocrPageImages(prepared, setStatusLabel);
+        setStatusLabel("Trying on-device OCR…");
+        const forTesseract: File[] = [];
+        for (const { file } of images) {
+          forTesseract.push(await preparePageImageForOcr(file));
+        }
+        text = await ocrPageImages(forTesseract, setStatusLabel);
+        if (looksLikeGarbageOcr(text)) {
+          throw new Error(
+            "Couldn't read clear text from that photo. Try a flatter, well-lit shot of just the page (less background).",
+          );
+        }
       }
 
       onExtracted(text);
