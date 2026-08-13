@@ -119,6 +119,8 @@ model ReadingSession {
   /// incrementally by submitChunkSummary from client-reported per-chunk
   /// durations — clamped server-side, not a precise instrument.
   elapsedSeconds    Int           @default(0)
+  /// When set, session is pinned to the top of the library list.
+  pinnedAt          DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   completedAt       DateTime?
@@ -134,6 +136,7 @@ model ReadingSession {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, status])
+  @@index([userId, pinnedAt(sort: Desc)])
 }
 
 /// A word a reader looked up while reading (F-004). One row per distinct

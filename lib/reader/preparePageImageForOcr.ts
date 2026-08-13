@@ -1,7 +1,7 @@
 /**
  * Client-side image prep for OCR.
- * - Google Vision: keep color + EXIF orientation, mild downscale (Vision hates
- *   the grayscale/contrast tricks that help Tesseract).
+ * - Google Vision: keep color + EXIF orientation, mild downscale, content crop
+ *   (drop desk/keyboard margins). Vision hates grayscale/contrast tricks.
  * - Tesseract: grayscale + contrast boost for on-device fallback.
  */
 
@@ -12,9 +12,85 @@ export const MAX_VISION_EDGE_PX = 2800;
 export const OCR_JPEG_QUALITY = 0.92;
 export const VISION_JPEG_QUALITY = 0.95;
 
+/** Ink darker than this counts toward the page content bbox (0–255). */
+const CONTENT_LUMA_MAX = 210;
+/** Require at least this fraction of the frame before accepting a crop. */
+const MIN_CONTENT_AREA_RATIO = 0.18;
+const CONTENT_PAD_RATIO = 0.03;
+
+export type ContentBounds = { x: number; y: number; width: number; height: number };
+
+/**
+ * Find the bounding box of dark (ink / shadow) pixels so we can crop away
+ * desk, keyboard, and stickers around a photographed book page.
+ * Exported for unit tests.
+ */
+export function findContentBounds(
+  data: Uint8ClampedArray | Uint8Array,
+  width: number,
+  height: number,
+): ContentBounds | null {
+  if (width < 8 || height < 8) return null;
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  let ink = 0;
+
+  // Sample every 2nd pixel for speed on large phone photos.
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      const i = (y * width + x) * 4;
+      const r = data[i] ?? 255;
+      const g = data[i + 1] ?? 255;
+      const b = data[i + 2] ?? 255;
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (luma > CONTENT_LUMA_MAX) continue;
+      ink += 1;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY || ink < 80) return null;
+
+  const padX = Math.max(4, Math.round(width * CONTENT_PAD_RATIO));
+  const padY = Math.max(4, Math.round(height * CONTENT_PAD_RATIO));
+  const x = Math.max(0, minX - padX);
+  const y = Math.max(0, minY - padY);
+  const right = Math.min(width, maxX + padX + 1);
+  const bottom = Math.min(height, maxY + padY + 1);
+  const w = right - x;
+  const h = bottom - y;
+
+  if (w * h < width * height * MIN_CONTENT_AREA_RATIO) return null;
+  // Skip near-noop crops (already tight).
+  if (w >= width * 0.96 && h >= height * 0.96) return null;
+
+  return { x, y, width: w, height: h };
+}
+
+function cropCanvasToContent(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const bounds = findContentBounds(imageData.data, canvas.width, canvas.height);
+  if (!bounds) return;
+
+  const cropped = ctx.getImageData(bounds.x, bounds.y, bounds.width, bounds.height);
+  canvas.width = bounds.width;
+  canvas.height = bounds.height;
+  // Resizing the canvas resets the 2d context — write through a fresh one.
+  const next = canvas.getContext("2d");
+  if (!next) return;
+  next.putImageData(cropped, 0, 0);
+}
+
 async function drawFileToCanvas(
   file: File,
   maxEdge: number,
+  options?: { cropContent?: boolean },
 ): Promise<{ canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }> {
   let width: number;
   let height: number;
@@ -57,6 +133,10 @@ async function drawFileToCanvas(
     source.close();
   }
 
+  if (options?.cropContent) {
+    cropCanvasToContent(canvas, ctx);
+  }
+
   return { canvas, ctx };
 }
 
@@ -90,9 +170,10 @@ async function canvasToJpegFile(canvas: HTMLCanvasElement, name: string, quality
 
 /**
  * Color JPEG for Google Cloud Vision — no grayscale/contrast (those hurt Vision).
+ * Crops to ink bounds so desk/keyboard around the page don't confuse reading order.
  */
 export async function preparePageImageForGoogleVision(file: File): Promise<File> {
-  const { canvas } = await drawFileToCanvas(file, MAX_VISION_EDGE_PX);
+  const { canvas } = await drawFileToCanvas(file, MAX_VISION_EDGE_PX, { cropContent: true });
   return canvasToJpegFile(canvas, file.name, VISION_JPEG_QUALITY);
 }
 

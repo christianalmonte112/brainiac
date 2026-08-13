@@ -76,6 +76,32 @@ export async function deleteReadingSession(formData: FormData): Promise<void> {
   redirect("/reader");
 }
 
+/** Pins or unpins a session the caller owns (library ⋮ menu). */
+export async function togglePinReadingSession(formData: FormData): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
+  const sessionId = formData.get("sessionId");
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return;
+  }
+
+  const session = await prisma.readingSession.findFirst({
+    where: { id: sessionId, userId },
+    select: { id: true, pinnedAt: true },
+  });
+  if (!session) return;
+
+  await prisma.readingSession.update({
+    where: { id: session.id },
+    data: { pinnedAt: session.pinnedAt ? null : new Date() },
+  });
+
+  revalidatePath("/reader");
+}
+
 export interface SubmitChunkSummaryResult {
   completed: boolean;
   /** Claude score 0–100. Only present when mode is "summary" and scoring succeeded. */

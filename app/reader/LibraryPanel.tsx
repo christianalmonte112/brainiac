@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FileText, Folder, MoreHorizontal, Search, Settings, SlidersHorizontal } from "lucide-react";
+import { FileText, Folder, Pin, Search, Settings, SlidersHorizontal } from "lucide-react";
 import type { ReadingSession } from "@prisma/client";
 import { BrainLogo } from "@/components/BrainLogo";
 import { NewSessionForm } from "./NewSessionForm";
 import { BaselineSparklineCard } from "./BaselineSparklineCard";
-import { deleteReadingSession } from "./actions";
+import { SessionActionsMenu } from "./SessionActionsMenu";
 
 interface LibraryPanelProps {
   sessions: ReadingSession[];
@@ -24,14 +24,24 @@ function formatRelative(date: Date): string {
   return months === 1 ? "1mo ago" : `${months}mo ago`;
 }
 
+function sortLibrarySessions(sessions: ReadingSession[]): ReadingSession[] {
+  return [...sessions].sort((a, b) => {
+    const aPinned = a.pinnedAt ? 1 : 0;
+    const bPinned = b.pinnedAt ? 1 : 0;
+    if (aPinned !== bPinned) return bPinned - aPinned;
+    return b.updatedAt.getTime() - a.updatedAt.getTime();
+  });
+}
+
 /** Full left library column — brand, New Document, search, list, baseline card. */
 export function LibraryPanel({ sessions, baselineWPM }: LibraryPanelProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return sessions;
-    return sessions.filter((s) => s.title.toLowerCase().includes(q));
+    const base = sortLibrarySessions(sessions);
+    if (!q) return base;
+    return base.filter((s) => s.title.toLowerCase().includes(q));
   }, [sessions, query]);
 
   return (
@@ -96,22 +106,22 @@ export function LibraryPanel({ sessions, baselineWPM }: LibraryPanelProps) {
                 >
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" strokeWidth={1.75} />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-black">{session.title}</span>
+                    <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-black">
+                      {session.pinnedAt && (
+                        <Pin className="h-3 w-3 shrink-0 text-neutral-500" strokeWidth={2} aria-label="Pinned" />
+                      )}
+                      <span className="truncate">{session.title}</span>
+                    </span>
                     <span className="mt-0.5 block truncate text-xs text-neutral-500">
                       {(session.wordCount ?? 0).toLocaleString()} words · {formatRelative(session.updatedAt)}
                     </span>
                   </span>
                 </Link>
-                <form action={deleteReadingSession} className="pr-1">
-                  <input type="hidden" name="sessionId" value={session.id} />
-                  <button
-                    type="submit"
-                    aria-label={`Delete ${session.title}`}
-                    className="invisible flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 group-hover:visible"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </form>
+                <SessionActionsMenu
+                  sessionId={session.id}
+                  title={session.title}
+                  pinned={Boolean(session.pinnedAt)}
+                />
               </li>
             ))}
           </ul>

@@ -1,4 +1,8 @@
 import { normalizeOcrText } from "../reader/normalizeOcrText";
+import {
+  textFromFullTextAnnotation,
+  type VisionFullTextAnnotation,
+} from "./visionTextFromAnnotation";
 
 export type VisionImageInput = {
   base64: string;
@@ -6,7 +10,7 @@ export type VisionImageInput = {
 
 type VisionAnnotateResponse = {
   responses?: Array<{
-    fullTextAnnotation?: { text?: string };
+    fullTextAnnotation?: VisionFullTextAnnotation;
     textAnnotations?: Array<{ description?: string }>;
     error?: { message?: string; status?: string };
   }>;
@@ -18,11 +22,9 @@ export function isGoogleVisionConfigured(): boolean {
 }
 
 function pickText(item: NonNullable<VisionAnnotateResponse["responses"]>[number]): string {
-  return (
-    item.fullTextAnnotation?.text?.trim() ||
-    item.textAnnotations?.[0]?.description?.trim() ||
-    ""
-  );
+  const fromGeometry = textFromFullTextAnnotation(item.fullTextAnnotation);
+  if (fromGeometry) return fromGeometry;
+  return item.textAnnotations?.[0]?.description?.trim() || "";
 }
 
 /**
@@ -72,6 +74,5 @@ export async function extractTextWithGoogleVision(images: VisionImageInput[]): P
     if (text) pages.push(text);
   }
 
-  // Light reflow only — Vision already returns usable line breaks.
   return normalizeOcrText(pages.join("\n\n"));
 }

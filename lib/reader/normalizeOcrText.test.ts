@@ -31,4 +31,27 @@ describe("normalizeOcrText", () => {
   it("drops lone junk symbol lines", () => {
     expect(normalizeOcrText("Hello world.\n¥\nMore text here.")).toBe("Hello world.\n\nMore text here.");
   });
+
+  it("drops lone page-number lines", () => {
+    const out = normalizeOcrText("Holy shit!\nWe had something.\n92");
+    expect(out).toContain("Holy shit!");
+    expect(out).not.toMatch(/\b92\b/);
+  });
+
+  it("strips digit clusters and page-bleed numbers mid-sentence", () => {
+    const raw =
+      "come. 'Yeah?' 'Yeah. 95 999 Eddie walked off with his test tube. Then juice spurted out of the head of my 92";
+    const out = normalizeOcrText(raw);
+    expect(out).not.toMatch(/\b95\b/);
+    expect(out).not.toMatch(/\b999\b/);
+    expect(out).not.toMatch(/\b92\b/);
+    expect(out).toContain("Yeah.");
+    expect(out).toContain("Eddie walked off");
+    expect(out).toContain("head of my");
+  });
+
+  it("keeps real ages between longer words", () => {
+    expect(normalizeOcrText("I was 12 years old then.")).toContain("12 years");
+  });
 });
+
