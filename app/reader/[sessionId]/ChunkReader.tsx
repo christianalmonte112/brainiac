@@ -116,8 +116,19 @@ export function ChunkReader({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { content: string };
+      const data = (await res.json().catch(() => ({}))) as { content?: string; error?: string };
+      if (!res.ok) {
+        if (res.status === 429) {
+          setSummaryError(data.error ?? "Too many AI requests this hour. Wait a bit, then try again.");
+        } else {
+          setSummaryError(data.error ?? "Couldn't generate summary. Please try again.");
+        }
+        return;
+      }
+      if (!data.content) {
+        setSummaryError("Couldn't generate summary. Please try again.");
+        return;
+      }
       setSummaryContent(data.content);
       setSummaryOpen(true);
     } catch {

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const rateLimitResponse = await checkRateLimit("aiGeneration", userId);
+      const rateLimitResponse = await checkRateLimit("ocr", userId);
       if (rateLimitResponse) return rateLimitResponse;
     } catch {
       // Fail open if Upstash isn't configured.
