@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   env: {
     CLERK_CLOCK_SKEW_MS: "60000",
   },
+  // proxy.ts buffers request bodies; keep headroom for multi-page photo OCR uploads.
+  experimental: {
+    proxyClientMaxBodySize: "10mb",
+    // Large pastes / multi-page OCR text into createReadingSession.
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
 };
 
 export default nextConfig;

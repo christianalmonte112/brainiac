@@ -75,6 +75,7 @@ erDiagram
         enum status
         int currentChunkIndex
         int elapsedSeconds
+        datetime pinnedAt
         datetime createdAt
         datetime updatedAt
         datetime completedAt
@@ -187,6 +188,7 @@ Core entity representing one reading unit.
 | `status` | `SessionStatus` | Default `DRAFT` | Lifecycle state |
 | `currentChunkIndex` | `Int` | Default `0` | Next unread chunk (F-002); chunks derived at render time |
 | `elapsedSeconds` | `Int` | Default `0` | Accrued active reading time (F-005), client-reported / server-clamped |
+| `pinnedAt` | `DateTime` | Optional | When set, session is pinned to the top of the library |
 | `createdAt` | `DateTime` | Default now | Created |
 | `updatedAt` | `DateTime` | Auto | Updated |
 | `completedAt` | `DateTime` | Optional | When session completed |
@@ -198,6 +200,7 @@ Core entity representing one reading unit.
 **Indexes:**
 - `(userId, createdAt DESC)` — dashboard listing
 - `(userId, status)` — filtered views
+- `(userId, pinnedAt DESC)` — pinned library sort
 
 ---
 

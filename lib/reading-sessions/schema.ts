@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** Max paste/OCR document size. ~200k chars ≈ 30–40k words (multi-chapter / many pages). */
+export const MAX_SOURCE_TEXT_CHARS = 200_000;
+
 /** Validation rules per docs/FEATURES.md F-003. */
 export const createReadingSessionSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(200, "Title must be 200 characters or fewer."),
@@ -7,7 +10,7 @@ export const createReadingSessionSchema = z.object({
     .string()
     .trim()
     .min(100, "Paste at least 100 characters of text.")
-    .max(50_000, "Text must be 50,000 characters or fewer."),
+    .max(MAX_SOURCE_TEXT_CHARS, `Text must be ${MAX_SOURCE_TEXT_CHARS.toLocaleString()} characters or fewer.`),
 });
 
 export type CreateReadingSessionInput = z.infer<typeof createReadingSessionSchema>;

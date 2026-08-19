@@ -14,8 +14,12 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResponse = await checkRateLimit("voiceList", userId);
-  if (rateLimitResponse) return rateLimitResponse;
+  try {
+    const rateLimitResponse = await checkRateLimit("voiceList", userId);
+    if (rateLimitResponse) return rateLimitResponse;
+  } catch {
+    // Fail open if Upstash isn't configured on this deployment.
+  }
 
   try {
     const response = await getElevenLabsClient().voices.search();

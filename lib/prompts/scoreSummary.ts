@@ -1,4 +1,5 @@
 import { getAnthropic } from "@/lib/ai/client";
+import { parseSummaryScoreText } from "./scoreSummaryParse";
 
 export const SCORE_SUMMARY_MODEL = "claude-sonnet-4-5";
 
@@ -6,7 +7,7 @@ const SYSTEM_PROMPT = `You are a reading comprehension coach evaluating a studen
 
 Given the original passage and the student's summary, you will:
 1. Score the summary 0–100 based on accuracy and completeness
-2. Provide 1–2 sentences of brief, encouraging feedback
+2. Provide 1–2 sentences of brief, encouraging feedback that mentions something specific about their summary
 
 Scoring guide:
 - 90–100: Captures all key ideas accurately with strong phrasing
@@ -17,50 +18,51 @@ Scoring guide:
 
 Always be encouraging — the student is learning. Acknowledge effort even when the score is low.
 
-Respond ONLY as a JSON object with this exact shape:
-{"score": <integer 0–100>, "feedback": "<1–2 sentences>"}
+Respond with ONLY a raw JSON object (no markdown fences, no preamble):
+{"score": <integer 0–100>, "feedback": "<1–2 sentences>"}`;
 
-No markdown, no extra keys, no explanation outside the JSON.`;
+export type SummaryScoreResult =
+  | { ok: true; score: number; feedback: string }
+  | { ok: false; feedback: string };
 
-export interface SummaryScoreResult {
-  score: number;
-  feedback: string;
-}
+const UNSCORED_FEEDBACK =
+  "We couldn't score this summary right now. Your progress is saved — continue when you're ready.";
 
 /**
  * Scores a user's chunk summary against the original passage using Claude.
- * Uses non-streaming messages — the response is short (JSON only) so streaming
- * adds latency overhead without UX benefit here.
- *
- * Returns a safe fallback result rather than throwing if parsing fails, so a
- * Claude hiccup never blocks the user from advancing to the next chunk.
+ * Returns `{ ok: false }` instead of a fake 0/100 when Claude is unavailable
+ * or returns unparseable output — so the UI never pretends the student scored zero.
  */
 export async function scoreChunkSummary(
   chunkText: string,
   userSummary: string,
 ): Promise<SummaryScoreResult> {
-  const userMessage = `PASSAGE:\n${chunkText.trim()}\n\nSTUDENT SUMMARY:\n${userSummary.trim()}`;
-
-  const message = await getAnthropic().messages.create({
-    model: SCORE_SUMMARY_MODEL,
-    max_tokens: 256,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const raw = message.content[0];
-  if (!raw || raw.type !== "text") {
-    return { score: 0, feedback: "We couldn't score your summary this time — keep up the great work!" };
+  if (!chunkText.trim() || !userSummary.trim()) {
+    return { ok: false, feedback: UNSCORED_FEEDBACK };
   }
 
+  const userMessage = `PASSAGE:\n${chunkText.trim()}\n\nSTUDENT SUMMARY:\n${userSummary.trim()}`;
+
   try {
-    const parsed = JSON.parse(raw.text) as { score: unknown; feedback: unknown };
-    const score = typeof parsed.score === "number" ? Math.min(100, Math.max(0, Math.round(parsed.score))) : 0;
-    const feedback = typeof parsed.feedback === "string" && parsed.feedback.length > 0
-      ? parsed.feedback
-      : "Nice work summarizing this section!";
-    return { score, feedback };
+    const message = await getAnthropic().messages.create({
+      model: SCORE_SUMMARY_MODEL,
+      max_tokens: 256,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+
+    const raw = message.content[0];
+    if (!raw || raw.type !== "text") {
+      return { ok: false, feedback: UNSCORED_FEEDBACK };
+    }
+
+    const parsed = parseSummaryScoreText(raw.text);
+    if (!parsed) {
+      return { ok: false, feedback: UNSCORED_FEEDBACK };
+    }
+
+    return { ok: true, score: parsed.score, feedback: parsed.feedback };
   } catch {
-    return { score: 0, feedback: "Nice work summarizing this section — keep it up!" };
+    return { ok: false, feedback: UNSCORED_FEEDBACK };
   }
 }

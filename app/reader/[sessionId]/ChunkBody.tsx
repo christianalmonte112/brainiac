@@ -23,9 +23,11 @@ interface ChunkBodyProps {
 }
 
 interface ScoringResult {
-  aiScore: number;
+  /** Present when Claude returned a real score; omitted when scoringFailed. */
+  aiScore?: number;
   aiFeedback: string;
   completed: boolean;
+  scoringFailed?: boolean;
 }
 
 function ScoreBar({ score }: { score: number }) {
@@ -93,17 +95,28 @@ export function ChunkBody({
   }
 
   function handleScoredAdvance(result: Awaited<ReturnType<typeof submitChunkSummary>>) {
-    if (result.aiScore === undefined) {
-      onSubmitted(result.completed);
+    if (result.aiScore !== undefined) {
+      setScoringResult({
+        aiScore: result.aiScore,
+        aiFeedback: result.aiFeedback ?? "",
+        completed: result.completed,
+      });
+      setStage("scored");
       return;
     }
 
-    setScoringResult({
-      aiScore: result.aiScore,
-      aiFeedback: result.aiFeedback ?? "",
-      completed: result.completed,
-    });
-    setStage("scored");
+    if (result.scoringFailed) {
+      setScoringResult({
+        aiFeedback: result.aiFeedback ?? "We couldn't score this summary right now.",
+        completed: result.completed,
+        scoringFailed: true,
+      });
+      setStage("scored");
+      return;
+    }
+
+    // Keywords mode (or no score path) — advance immediately.
+    onSubmitted(result.completed);
   }
 
   async function runSummarySubmission(summary: string): Promise<void> {
@@ -296,21 +309,29 @@ export function ChunkBody({
         </div>
       )}
 
-      {/* Stage: scored — show AI feedback before advancing */}
+      {/* Stage: scored — show AI feedback (or honest unscored notice) before advancing */}
       {stage === "scored" && scoringResult && (
         <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Summary score</p>
-            <div className="mt-2">
-              <ScoreBar score={scoringResult.aiScore} />
+          {scoringResult.scoringFailed || scoringResult.aiScore === undefined ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Summary</p>
+              <p className="mt-2 text-sm font-medium text-slate-900">Saved — scoring unavailable</p>
             </div>
-          </div>
+          ) : (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Summary score</p>
+              <div className="mt-2">
+                <ScoreBar score={scoringResult.aiScore} />
+              </div>
+            </div>
+          )}
 
           {scoringResult.aiFeedback && (
             <p className="text-sm leading-relaxed text-slate-700">{scoringResult.aiFeedback}</p>
           )}
 
           <button
+            type="button"
             onClick={() => onSubmitted(scoringResult.completed)}
             className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
           >
