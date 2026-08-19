@@ -14,6 +14,13 @@ import {
  */
 const WPM_FOR_MAX_SPEED_SCORE = 300;
 
+/**
+ * Hard ceiling for recorded baseline WPM. Real-world peak silent reading is
+ * well below this; values like 9,000 WPM mean the user skipped the passage
+ * in a couple of seconds.
+ */
+export const MAX_PLAUSIBLE_READING_WPM = 800;
+
 /** Equal weighting across the four baseline dimensions. Must sum to 1. */
 const SCORE_WEIGHTS = {
   speed: 0.25,
@@ -26,10 +33,25 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** Words per minute from a word count and elapsed time. */
+/** Minimum seconds to read `wordCount` words without exceeding max plausible WPM. */
+export function minElapsedSecondsForPassage(
+  wordCount: number,
+  maxWpm: number = MAX_PLAUSIBLE_READING_WPM,
+): number {
+  if (wordCount <= 0 || maxWpm <= 0) return 1;
+  return Math.max(1, Math.ceil((wordCount / maxWpm) * 60));
+}
+
+/** True when a stored baseline is almost certainly a skip/glitch, not real reading. */
+export function isImplausibleBaselineWpm(wpm: number): boolean {
+  return wpm > MAX_PLAUSIBLE_READING_WPM;
+}
+
+/** Words per minute from a word count and elapsed time, capped at a plausible max. */
 export function calculateWPM(wordCount: number, elapsedSeconds: number): number {
   if (elapsedSeconds <= 0) return 0;
-  return Math.round(wordCount / (elapsedSeconds / 60));
+  const raw = Math.round(wordCount / (elapsedSeconds / 60));
+  return Math.min(raw, MAX_PLAUSIBLE_READING_WPM);
 }
 
 /** Maps raw WPM onto a 0-100 scale so it can be combined with percentage scores. */
@@ -65,7 +87,11 @@ export interface BaselineScoreResult {
 
 /** Pure scoring function — no DB or auth dependency, easy to unit test. */
 export function computeBaselineScores(input: BaselineScoreInput): BaselineScoreResult {
-  const readingSpeedWPM = calculateWPM(input.wordCount, input.elapsedSeconds);
+  const elapsedSeconds = Math.max(
+    input.elapsedSeconds,
+    minElapsedSecondsForPassage(input.wordCount),
+  );
+  const readingSpeedWPM = calculateWPM(input.wordCount, elapsedSeconds);
   const comprehensionScore = scoreSection(input.comprehensionAnswers, COMPREHENSION_QUESTIONS);
   const vocabularyScore = scoreSection(input.vocabularyAnswers, VOCABULARY_QUESTIONS);
   const inferenceScore = scoreSection(input.inferenceAnswers, INFERENCE_QUESTIONS);

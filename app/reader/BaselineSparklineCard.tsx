@@ -1,3 +1,5 @@
+import { isImplausibleBaselineWpm } from "@/lib/baseline-assessment/scoring";
+
 interface BaselineSparklineCardProps {
   baselineWPM: number | null;
 }
@@ -5,6 +7,8 @@ interface BaselineSparklineCardProps {
 /** Sidebar bottom card — baseline WPM + decorative upward sparkline. */
 export function BaselineSparklineCard({ baselineWPM }: BaselineSparklineCardProps) {
   if (baselineWPM === null) return null;
+
+  const looksBroken = isImplausibleBaselineWpm(baselineWPM);
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
@@ -16,7 +20,9 @@ export function BaselineSparklineCard({ baselineWPM }: BaselineSparklineCardProp
           <p className="mt-1 text-2xl font-semibold tracking-tight text-black">
             {baselineWPM.toLocaleString()} WPM
           </p>
-          <p className="mt-0.5 text-xs text-neutral-400">Last measured</p>
+          <p className={`mt-0.5 text-xs ${looksBroken ? "text-amber-700" : "text-neutral-400"}`}>
+            {looksBroken ? "Looks off — retake on Progress" : "Last measured"}
+          </p>
         </div>
         <svg
           viewBox="0 0 88 40"

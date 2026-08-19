@@ -1,6 +1,7 @@
 "use server";
 
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { computeBaselineScores, type BaselineScoreResult } from "@/lib/baseline-assessment/scoring";
 import { submitBaselineAssessmentSchema, type SubmitBaselineAssessmentInput } from "@/lib/baseline-assessment/schema";
@@ -30,6 +31,7 @@ export async function submitBaselineAssessment(
   // The baseline is permanent and never overwritten. If one already exists
   // (e.g. a double-submit or a back-navigation resubmit), return it as-is
   // instead of violating the unique constraint on userId.
+  // Exception: implausible speeds (skip-through) can be replaced via retakeBaselineAssessment.
   const existing = await prisma.baselineAssessment.findUnique({ where: { userId } });
   if (existing) {
     return {
@@ -78,4 +80,24 @@ export async function submitBaselineAssessment(
   });
 
   return { ...scores, alreadyCompleted: false };
+}
+
+/**
+ * Clears the user's baseline so they can re-run onboarding assessment.
+ * Used when a stored WPM is clearly a skip-through glitch (e.g. 9,000+ WPM).
+ */
+export async function retakeBaselineAssessment(): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("Not authenticated.");
+  }
+
+  await prisma.baselineAssessment.deleteMany({ where: { userId } });
+
+  const clerk = await clerkClient();
+  await clerk.users.updateUserMetadata(userId, {
+    publicMetadata: { onboardingComplete: false },
+  });
+
+  redirect("/onboarding/assessment");
 }
