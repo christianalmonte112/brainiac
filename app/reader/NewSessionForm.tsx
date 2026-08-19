@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { countWords } from "@/lib/text/word-count";
 import { OPEN_NEW_DOCUMENT_EVENT, type OpenNewDocumentDetail } from "@/lib/reader/newDocumentEvents";
+import { MAX_SOURCE_TEXT_CHARS } from "@/lib/reading-sessions/schema";
 import { createReadingSession, type CreateSessionActionState } from "./actions";
 import { ImagePageUpload } from "./ImagePageUpload";
 
@@ -16,6 +17,9 @@ export function NewSessionForm() {
   const [sourceText, setSourceText] = useState("");
   const [state, formAction, isPending] = useActionState(createReadingSession, initialState);
   const wordCount = useMemo(() => countWords(sourceText), [sourceText]);
+  const charCount = sourceText.length;
+  const nearLimit = charCount >= MAX_SOURCE_TEXT_CHARS * 0.9;
+  const overLimit = charCount > MAX_SOURCE_TEXT_CHARS;
 
   useEffect(() => {
     function onOpen(e: Event) {
@@ -91,14 +95,20 @@ export function NewSessionForm() {
         onChange={(e) => setSourceText(e.target.value)}
         className="resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm text-black focus:border-neutral-400 focus:outline-none"
       />
-      <div className="flex items-center justify-between text-xs text-neutral-500">
-        <span>{wordCount} words</span>
+      <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+        <span>
+          {wordCount.toLocaleString()} words
+          <span className={nearLimit || overLimit ? (overLimit ? " text-red-600" : " text-amber-600") : " text-neutral-400"}>
+            {" "}
+            · {charCount.toLocaleString()} / {MAX_SOURCE_TEXT_CHARS.toLocaleString()} chars
+          </span>
+        </span>
         {state.error && <span className="text-red-600">{state.error}</span>}
       </div>
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || overLimit}
           className="flex-1 rounded-xl bg-black px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-900 disabled:cursor-not-allowed disabled:bg-neutral-300"
         >
           {isPending ? "Saving..." : "Save"}

@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   // proxy.ts buffers request bodies; keep headroom for multi-page photo OCR uploads.
   experimental: {
     proxyClientMaxBodySize: "10mb",
+    // Large pastes / multi-page OCR text into createReadingSession.
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
   },
 };
 
