@@ -56,4 +56,12 @@ describe("checkRateLimit", () => {
     // Both calls succeeded independently — tiers don't share a single limiter instance.
     expect(limitMock).toHaveBeenCalledTimes(2);
   });
+
+  it("fails open when Redis/Upstash throws", async () => {
+    limitMock.mockRejectedValue(new Error("UPSTASH_REDIS_REST_URL is missing"));
+
+    const result = await checkRateLimit("aiGeneration", "user_open");
+
+    expect(result).toBeNull();
+  });
 });

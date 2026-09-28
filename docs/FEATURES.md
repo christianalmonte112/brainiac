@@ -123,7 +123,7 @@ Users create reading sessions by pasting text, assign a title, and manage a pers
 | Rule | Behavior |
 |------|----------|
 | Title required | Min 1 char, max 200 chars |
-| Text required | Min 100 chars, max 50,000 chars |
+| Text required | Min 100 chars, max 200,000 chars |
 | Word count | Computed server-side on save |
 
 ### API / Actions
@@ -333,7 +333,7 @@ Upload `.txt` or `.pdf` files to create a reading session without manual paste.
 ### Limits
 
 - Max file size: 5 MB
-- Extracted text subject to same 50,000 char limit
+- Extracted text subject to same 200,000 char limit
 
 ---
 

@@ -127,7 +127,7 @@ Reads books and essays for personal growth. Values streaks, community discussion
 ### 6.2 Reading Session Management
 
 - Create session with: title, source text, optional metadata (word count, source URL)
-- Maximum text length: 50,000 characters (MVP); truncate with user warning beyond limit
+- Maximum text length: 200,000 characters; reject with user warning beyond limit
 - Sessions scoped to authenticated user only
 - Timestamps: `createdAt`, `updatedAt`, `completedAt`
 

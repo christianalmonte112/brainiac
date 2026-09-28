@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BASELINE_PASSAGE,
@@ -8,12 +8,14 @@ import {
   INFERENCE_QUESTIONS,
   VOCABULARY_QUESTIONS,
 } from "@/lib/baseline-assessment/content";
+import { minElapsedSecondsForPassage } from "@/lib/baseline-assessment/scoring";
 import { submitBaselineAssessment, type SubmitBaselineAssessmentResult } from "./actions";
 import { QuestionStep } from "./QuestionStep";
 
 type Step = "intro" | "reading" | "comprehension" | "vocabulary" | "inference" | "results";
 
 const UNANSWERED = -1;
+const MIN_READING_SECONDS = minElapsedSecondsForPassage(BASELINE_PASSAGE.wordCount);
 
 export function AssessmentFlow() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export function AssessmentFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitBaselineAssessmentResult | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(MIN_READING_SECONDS);
 
   const [comprehensionAnswers, setComprehensionAnswers] = useState<number[]>(
     () => Array(COMPREHENSION_QUESTIONS.length).fill(UNANSWERED),
@@ -35,15 +38,29 @@ export function AssessmentFlow() {
   const readingStartedAt = useRef<number | null>(null);
   const elapsedSecondsRef = useRef<number>(0);
 
+  useEffect(() => {
+    if (step !== "reading" || readingStartedAt.current === null) return;
+
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - (readingStartedAt.current ?? Date.now())) / 1000);
+      setSecondsLeft(Math.max(0, MIN_READING_SECONDS - elapsed));
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [step]);
+
   function startReading() {
     readingStartedAt.current = Date.now();
+    setSecondsLeft(MIN_READING_SECONDS);
     setStep("reading");
   }
 
   function finishReading() {
-    if (readingStartedAt.current !== null) {
-      elapsedSecondsRef.current = Math.max(1, Math.round((Date.now() - readingStartedAt.current) / 1000));
-    }
+    if (readingStartedAt.current === null) return;
+    const elapsed = Math.max(1, Math.round((Date.now() - readingStartedAt.current) / 1000));
+    if (elapsed < MIN_READING_SECONDS) return;
+    elapsedSecondsRef.current = elapsed;
     setStep("comprehension");
   }
 
@@ -77,6 +94,7 @@ export function AssessmentFlow() {
   const allAnswered = (answers: number[]) => answers.every((a) => a !== UNANSWERED);
 
   const paragraphs = useMemo(() => BASELINE_PASSAGE.body.split("\n\n"), []);
+  const canFinishReading = secondsLeft === 0;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12">
@@ -107,12 +125,20 @@ export function AssessmentFlow() {
               <p key={index}>{paragraph}</p>
             ))}
           </div>
-          <button
-            onClick={finishReading}
-            className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
-          >
-            I&apos;ve finished reading
-          </button>
+          <div className="flex flex-col items-start gap-2">
+            <button
+              onClick={finishReading}
+              disabled={!canFinishReading}
+              className="self-start rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              I&apos;ve finished reading
+            </button>
+            {!canFinishReading && (
+              <p className="text-sm text-slate-500">
+                Read at a normal pace — continue available in {secondsLeft}s (keeps your baseline realistic).
+              </p>
+            )}
+          </div>
         </div>
       )}
 

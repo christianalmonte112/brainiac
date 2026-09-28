@@ -22,6 +22,8 @@ export default async function ReadingSessionPage({ params }: SessionPageProps) {
   }
 
   const chunks = chunkText(session.sourceText);
+  const initiallyComplete =
+    session.status === "COMPLETED" || session.currentChunkIndex >= chunks.length;
 
   if (chunks.length === 0) {
     return (
@@ -51,6 +53,7 @@ export default async function ReadingSessionPage({ params }: SessionPageProps) {
         initialChunkIndex={session.currentChunkIndex}
         documentTitle={session.title}
         documentText={session.sourceText}
+        initiallyComplete={initiallyComplete}
       />
     </article>
   );

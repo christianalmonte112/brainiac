@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { isImplausibleBaselineWpm } from "@/lib/baseline-assessment/scoring";
 import { computeReadingStreak } from "@/lib/progress/streak";
 import {
   buildGrowthSeries,
@@ -25,6 +26,7 @@ import { BadgeShelf } from "./BadgeShelf";
 import { ShareCard } from "./ShareCard";
 import { BillingPanel } from "./BillingPanel";
 import { TickerChart } from "./TickerChart";
+import { RetakeBaselineButton } from "./RetakeBaselineButton";
 import { getSubscriptionForUser } from "@/lib/subscription/getSubscription";
 import { isPremiumStatus } from "@/lib/subscription/status";
 
@@ -238,6 +240,7 @@ export default async function ProgressPage() {
         year: "numeric",
       })
     : null;
+  const baselineLooksBroken = isImplausibleBaselineWpm(baseline.readingSpeedWPM);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-10">
@@ -245,6 +248,20 @@ export default async function ProgressPage() {
         <h1 className="text-2xl font-bold text-slate-900">Your progress</h1>
         <p className="mt-1 text-sm text-slate-500">Baseline taken {baseline.takenAt.toLocaleDateString()}.</p>
       </div>
+
+      {baselineLooksBroken && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+          <p className="text-sm font-semibold text-amber-950">Baseline reading speed looks wrong</p>
+          <p className="mt-1 text-sm text-amber-900/80">
+            Your baseline is {baseline.readingSpeedWPM.toLocaleString()} WPM — that usually means the timed
+            passage was skipped in a few seconds. Progress (like 200 WPM) is fine; the comparison against
+            baseline isn&apos;t. Retake the assessment at a normal reading pace.
+          </p>
+          <div className="mt-3">
+            <RetakeBaselineButton />
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-slate-900 bg-slate-900 p-5 text-white">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">What to work on next</h2>
@@ -419,6 +436,15 @@ export default async function ProgressPage() {
             </tr>
           </tbody>
         </table>
+        {!baselineLooksBroken && (
+          <p className="mt-3 text-xs text-slate-500">
+            Baseline feel wrong?{" "}
+            <RetakeBaselineButton
+              label="Retake assessment"
+              className="font-medium text-slate-800 underline hover:text-black disabled:opacity-50"
+            />
+          </p>
+        )}
       </div>
 
       <div>
