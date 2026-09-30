@@ -3,7 +3,6 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import {
   computeMonthlyReport,
-  dedupeLatestPerSession,
   filterByLocalMonth,
   localMonthString,
   type MonthlyMetric,
@@ -50,17 +49,13 @@ export default async function MonthlyReportPage() {
   const dbCutoff = new Date();
   dbCutoff.setDate(dbCutoff.getDate() - DB_FETCH_BUFFER_DAYS);
 
-  const [baseline, user, allCompletedSessions, recentAttemptsForScore, recentAttemptsForQuestions, recentVocabWords, allVocabWords] =
+  const [baseline, user, allCompletedSessions, recentAttemptsForQuestions, recentSummaries, recentVocabWords, allVocabWords] =
     await Promise.all([
       prisma.baselineAssessment.findUnique({ where: { userId } }),
       prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
       prisma.readingSession.findMany({
         where: { userId, status: "COMPLETED" },
         select: { wordCount: true, elapsedSeconds: true, completedAt: true },
-      }),
-      prisma.quizAttempt.findMany({
-        where: { userId, createdAt: { gte: dbCutoff } },
-        select: { score: true, createdAt: true, quiz: { select: { sessionId: true } } },
       }),
       prisma.quizAttempt.findMany({
         where: { userId, createdAt: { gte: dbCutoff } },
@@ -71,6 +66,15 @@ export default async function MonthlyReportPage() {
             select: { questions: { orderBy: { orderIndex: "asc" }, select: { orderIndex: true, prompt: true, correctIndex: true } } },
           },
         },
+      }),
+      prisma.chunkSummary.findMany({
+        where: {
+          createdAt: { gte: dbCutoff },
+          summaryText: { not: null },
+          aiScore: { gt: 0 },
+          session: { userId },
+        },
+        select: { aiScore: true, createdAt: true },
       }),
       prisma.vocabularyWord.findMany({
         where: { userId, createdAt: { gte: dbCutoff } },
@@ -108,13 +112,11 @@ export default async function MonthlyReportPage() {
     month,
   );
 
-  const monthAttemptsForScore = filterByLocalMonth(recentAttemptsForScore, (a) => a.createdAt, timezone, month);
-  const monthQuizScores = dedupeLatestPerSession(
-    monthAttemptsForScore.map((a) => ({ sessionId: a.quiz.sessionId, score: a.score, createdAt: a.createdAt })),
-  );
-
   const monthAttemptsForQuestions = filterByLocalMonth(recentAttemptsForQuestions, (a) => a.createdAt, timezone, month);
   const monthQuestionResults = collectQuestionResultsFromAttempts(monthAttemptsForQuestions);
+  const monthSummaryScores = filterByLocalMonth(recentSummaries, (summary) => summary.createdAt, timezone, month).flatMap(
+    (summary) => (summary.aiScore === null ? [] : [summary.aiScore]),
+  );
 
   const vocabularyWordsAddedThisMonth = filterByLocalMonth(recentVocabWords, (w) => w.createdAt, timezone, month).length;
   const vocabularyMastery = computeVocabularyMastery(allVocabWords);
@@ -128,7 +130,7 @@ export default async function MonthlyReportPage() {
       inferenceScore: baseline.inferenceScore,
     },
     monthSessions,
-    monthQuizScores,
+    monthSummaryScores,
     monthQuestionResults,
     vocabularyWordsAddedThisMonth,
     currentVocabularyMasteryPercent: vocabularyMastery.masteryPercent,

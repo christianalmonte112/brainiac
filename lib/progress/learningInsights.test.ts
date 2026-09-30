@@ -6,6 +6,7 @@ import {
   buildReaderHomeInsight,
   buildSessionLearningReport,
   classifyQuestionType,
+  computeComprehensionScore,
   computeVocabularyMastery,
   accuracyForQuestionType,
 } from "./learningInsights";
@@ -19,6 +20,30 @@ describe("classifyQuestionType", () => {
     expect(classifyQuestionType("Question text", 0)).toBe("recall");
     expect(classifyQuestionType("Question text", 3)).toBe("comprehension");
     expect(classifyQuestionType("Question text", 4)).toBe("inference");
+  });
+});
+
+describe("computeComprehensionScore", () => {
+  it("averages section summaries with understanding questions and ignores recall", () => {
+    const score = computeComprehensionScore(
+      [80, 100],
+      [
+        { prompt: "What did the author say directly?", orderIndex: 0, isCorrect: false },
+        { prompt: "Question text", orderIndex: 2, isCorrect: true },
+        { prompt: "What can you infer from the ending?", orderIndex: 4, isCorrect: false },
+      ],
+    );
+
+    // Summaries average 90. Understanding questions are 1 of 2 correct = 50. Recall miss is ignored.
+    expect(score).toBe(70);
+  });
+
+  it("uses section summaries alone when there is no quiz yet", () => {
+    expect(computeComprehensionScore([70, 90], [])).toBe(80);
+  });
+
+  it("returns null when nothing has been scored", () => {
+    expect(computeComprehensionScore([0], [])).toBeNull();
   });
 });
 

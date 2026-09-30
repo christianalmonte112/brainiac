@@ -159,6 +159,36 @@ export function analyzeWeakAreas(results: QuestionResult[]): WeakAreaInsight[] {
     .sort((a, b) => a.accuracyPercent - b.accuracyPercent);
 }
 
+/**
+ * Comprehension score for Progress: section-summary grades plus quiz questions
+ * that test understanding (comprehension and inference). Recall questions stay
+ * out — remembering a fact is not the same as understanding the passage.
+ *
+ * The two parts are weighted equally when both exist. Either part alone is
+ * the score when the other is missing.
+ */
+export function computeComprehensionScore(
+  summaryScores: number[],
+  questionResults: QuestionResult[],
+): number | null {
+  const summaries = summaryScores.filter((score) => score > 0);
+  const understanding = questionResults.filter(
+    (result) => classifyQuestionType(result.prompt, result.orderIndex) !== "recall",
+  );
+
+  const summaryAvg =
+    summaries.length > 0 ? summaries.reduce((sum, score) => sum + score, 0) / summaries.length : null;
+  const understandingAvg =
+    understanding.length > 0
+      ? (understanding.filter((result) => result.isCorrect).length / understanding.length) * 100
+      : null;
+
+  if (summaryAvg === null && understandingAvg === null) return null;
+  if (summaryAvg === null) return Math.round(understandingAvg!);
+  if (understandingAvg === null) return Math.round(summaryAvg);
+  return Math.round((summaryAvg + understandingAvg) / 2);
+}
+
 /** Accuracy for one question type across all graded results, or null if none. */
 export function accuracyForQuestionType(
   results: QuestionResult[],

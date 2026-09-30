@@ -29,8 +29,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   { key: "speed_25", category: "speed", label: "Quick Reader", description: "Read 25% faster than your baseline.", icon: "⚡" },
   { key: "speed_50", category: "speed", label: "Speed Reader", description: "Read 50% faster than your baseline.", icon: "⚡" },
 
-  { key: "comprehension_80", category: "comprehension", label: "Sharp Mind", description: "Average 80%+ on quizzes.", icon: "🎯" },
-  { key: "comprehension_90", category: "comprehension", label: "Razor Sharp", description: "Average 90%+ on quizzes.", icon: "🎯" },
+  { key: "comprehension_80", category: "comprehension", label: "Sharp Mind", description: "Average 80%+ comprehension from summaries and understanding questions.", icon: "🎯" },
+  { key: "comprehension_90", category: "comprehension", label: "Razor Sharp", description: "Average 90%+ comprehension from summaries and understanding questions.", icon: "🎯" },
 
   { key: "vocabulary_10", category: "vocabulary", label: "Word Collector", description: "Master 10 vocabulary words.", icon: "🧠" },
   { key: "vocabulary_50", category: "vocabulary", label: "Lexicon Builder", description: "Master 50 vocabulary words.", icon: "🧠" },
