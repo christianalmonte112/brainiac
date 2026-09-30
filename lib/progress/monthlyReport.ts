@@ -1,6 +1,6 @@
 import { computeDelta, type Delta } from "./range";
 import { computeAverageWPM, type CompletedSessionStats } from "./stats";
-import { accuracyForQuestionType, type QuestionResult } from "./learningInsights";
+import { accuracyForQuestionType, computeComprehensionScore, type QuestionResult } from "./learningInsights";
 
 /**
  * Returns the calendar month (YYYY-MM) `date` falls on, in `timezone`. Reuses
@@ -69,8 +69,8 @@ export interface MonthlyReportInput {
   month: string;
   baseline: BaselineForReport;
   monthSessions: CompletedSessionStats[];
-  /** Latest attempt per session this month, already deduped by the caller. */
-  monthQuizScores: number[];
+  /** Claude scores (0–100) for section summaries written this month. */
+  monthSummaryScores: number[];
   monthQuestionResults: QuestionResult[];
   vocabularyWordsAddedThisMonth: number;
   /** Current overall mastery — not month-scoped, since mastery reflects long-term retention rather than this month's activity alone (same convention as the live "Baseline vs. current" table on the main progress page). */
@@ -85,11 +85,6 @@ function buildMetric(label: string, unit: string, baseline: number, current: num
     current,
     delta: current !== null ? computeDelta(current, baseline) : null,
   };
-}
-
-function average(values: number[]): number | null {
-  if (values.length === 0) return null;
-  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
 }
 
 export interface DedupableAttempt {
@@ -143,7 +138,7 @@ function buildHeadline(sessionsCompleted: number, wpm: MonthlyMetric, comprehens
 /** Pure computation — no DB or auth dependency, easy to unit test. */
 export function computeMonthlyReport(input: MonthlyReportInput): MonthlyProgressReport {
   const currentWPM = computeAverageWPM(input.monthSessions);
-  const currentComprehension = average(input.monthQuizScores);
+  const currentComprehension = computeComprehensionScore(input.monthSummaryScores, input.monthQuestionResults);
   const currentInference = accuracyForQuestionType(input.monthQuestionResults, "inference");
 
   const wpm = buildMetric("Reading speed", "WPM", input.baseline.readingSpeedWPM, currentWPM);

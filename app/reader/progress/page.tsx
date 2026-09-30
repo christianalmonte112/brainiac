@@ -17,6 +17,7 @@ import {
   buildFrictionPoints,
   buildNextActions,
   collectQuestionResultsFromAttempts,
+  computeComprehensionScore,
   computeVocabularyMastery,
 } from "@/lib/progress/learningInsights";
 import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
@@ -65,6 +66,7 @@ export default async function ProgressPage() {
     recentSessions,
     quizAttempts,
     gradedAttempts,
+    sectionSummaries,
     inProgressSessions,
     recentHighlights,
   ] = userId
@@ -123,6 +125,15 @@ export default async function ProgressPage() {
             },
           },
         }),
+        prisma.chunkSummary.findMany({
+          where: {
+            createdAt: { gte: thirtyDaysAgo },
+            summaryText: { not: null },
+            aiScore: { gt: 0 },
+            session: { userId },
+          },
+          select: { aiScore: true },
+        }),
         prisma.readingSession.findMany({
           where: { userId, status: "ACTIVE" },
           orderBy: { updatedAt: "desc" },
@@ -136,7 +147,7 @@ export default async function ProgressPage() {
           select: { selectedText: true },
         }),
       ])
-    : [null, [], [], 0, null, 0, [], [], [], [], []];
+    : [null, [], [], 0, null, 0, [], [], [], [], [], []];
 
   const subscription = userId ? await getSubscriptionForUser(userId) : null;
 
@@ -177,6 +188,10 @@ export default async function ProgressPage() {
   const weakAreas = analyzeWeakAreas(questionResults);
   const frictionPoints = buildFrictionPoints(weakAreas, recentHighlights);
   const inferenceAccuracy = accuracyForQuestionType(questionResults, "inference");
+  const comprehensionScore = computeComprehensionScore(
+    sectionSummaries.flatMap((summary) => (summary.aiScore === null ? [] : [summary.aiScore])),
+    questionResults,
+  );
 
   // F-021: re-evaluate and persist any newly-earned badges on every load —
   // see lib/badges/sync.ts for why this is "sync on read" rather than
@@ -190,7 +205,7 @@ export default async function ProgressPage() {
       completedSessions: completedSessions.length,
       currentWPM,
       baselineWPM: baseline.readingSpeedWPM,
-      avgQuizScorePercent: avgQuizScore,
+      avgQuizScorePercent: comprehensionScore,
       masteredVocabularyCount: vocabularyMastery.masteredCount,
     });
     const earnedBadges = await prisma.badge.findMany({ where: { userId }, select: { key: true } });
@@ -394,7 +409,12 @@ export default async function ProgressPage() {
 
       <div>
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Baseline vs. current</h2>
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Baseline vs. current</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Comprehension combines your section summaries with comprehension and inference quiz questions.
+            </p>
+          </div>
           <Link href="/reader/progress/monthly" className="text-xs font-medium text-slate-500 hover:text-slate-800">
             Monthly report →
           </Link>
@@ -416,7 +436,7 @@ export default async function ProgressPage() {
             <tr>
               <td className="py-2 text-slate-700">Comprehension</td>
               <td className="py-2 text-slate-900">{baseline.comprehensionScore}%</td>
-              <td className="py-2 text-slate-900">{avgQuizScore !== null ? `${avgQuizScore}%` : "—"}</td>
+              <td className="py-2 text-slate-900">{comprehensionScore !== null ? `${comprehensionScore}%` : "—"}</td>
             </tr>
             <tr>
               <td className="py-2 text-slate-700">Vocabulary</td>

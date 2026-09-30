@@ -87,7 +87,7 @@ describe("computeMonthlyReport", () => {
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [],
-      monthQuizScores: [],
+      monthSummaryScores: [],
       monthQuestionResults: [],
       vocabularyWordsAddedThisMonth: 0,
       currentVocabularyMasteryPercent: null,
@@ -105,7 +105,7 @@ describe("computeMonthlyReport", () => {
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [sessionAt("2026-08-10T00:00:00Z", 3000, 600)], // 300 WPM
-      monthQuizScores: [],
+      monthSummaryScores: [],
       monthQuestionResults: [],
       vocabularyWordsAddedThisMonth: 0,
       currentVocabularyMasteryPercent: null,
@@ -118,19 +118,23 @@ describe("computeMonthlyReport", () => {
     expect(report.headline).toMatch(/reading speed is up/i);
   });
 
-  it("computes comprehension from the average of this month's quiz scores", () => {
+  it("computes comprehension from section summaries and understanding questions", () => {
     const report = computeMonthlyReport({
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [sessionAt("2026-08-10T00:00:00Z", 1000, 300)],
-      monthQuizScores: [80, 90],
-      monthQuestionResults: [],
+      monthSummaryScores: [80, 100],
+      monthQuestionResults: [
+        { prompt: "Question text", orderIndex: 2, isCorrect: true },
+        { prompt: "What can you infer?", orderIndex: 4, isCorrect: false },
+      ],
       vocabularyWordsAddedThisMonth: 0,
       currentVocabularyMasteryPercent: null,
     });
 
-    expect(report.comprehension.current).toBe(85);
-    expect(report.comprehension.delta!.abs).toBe(15);
+    // Summaries average 90. Understanding questions are 50. Recall is not in this set.
+    expect(report.comprehension.current).toBe(70);
+    expect(report.comprehension.delta!.abs).toBe(0);
   });
 
   it("flags a comprehension drop below baseline", () => {
@@ -138,7 +142,7 @@ describe("computeMonthlyReport", () => {
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [sessionAt("2026-08-10T00:00:00Z", 1000, 300)],
-      monthQuizScores: [40],
+      monthSummaryScores: [40],
       monthQuestionResults: [],
       vocabularyWordsAddedThisMonth: 0,
       currentVocabularyMasteryPercent: null,
@@ -158,7 +162,7 @@ describe("computeMonthlyReport", () => {
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [sessionAt("2026-08-10T00:00:00Z", 1000, 300)],
-      monthQuizScores: [],
+      monthSummaryScores: [],
       monthQuestionResults: questionResults,
       vocabularyWordsAddedThisMonth: 0,
       currentVocabularyMasteryPercent: null,
@@ -172,7 +176,7 @@ describe("computeMonthlyReport", () => {
       month: "2026-08",
       baseline: BASELINE,
       monthSessions: [],
-      monthQuizScores: [],
+      monthSummaryScores: [],
       monthQuestionResults: [],
       vocabularyWordsAddedThisMonth: 12,
       currentVocabularyMasteryPercent: 75,
