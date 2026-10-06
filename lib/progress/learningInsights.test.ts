@@ -16,10 +16,16 @@ describe("classifyQuestionType", () => {
     expect(classifyQuestionType("What can you infer about the author's attitude?", 0)).toBe("inference");
   });
 
-  it("falls back to slot order when prompt is ambiguous", () => {
+  it("falls back to the five-question slot order when prompt is ambiguous", () => {
     expect(classifyQuestionType("Question text", 0)).toBe("recall");
     expect(classifyQuestionType("Question text", 3)).toBe("comprehension");
     expect(classifyQuestionType("Question text", 4)).toBe("inference");
+  });
+
+  it("uses the eight-question slot order when the quiz has eight questions", () => {
+    expect(classifyQuestionType("Question text", 1, 8)).toBe("recall");
+    expect(classifyQuestionType("Question text", 5, 8)).toBe("comprehension");
+    expect(classifyQuestionType("Question text", 6, 8)).toBe("inference");
   });
 });
 
