@@ -36,14 +36,14 @@ export function InviteForm() {
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none disabled:opacity-60"
         />
         {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
-        {success && <p className="mt-1 text-xs text-emerald-600">Invited — share the sign-up link with them directly.</p>}
+        {success && <p className="mt-1 text-xs text-emerald-600">Invite emailed. Ask them to check junk if it is not in their inbox.</p>}
       </div>
       <button
         type="submit"
         disabled={isPending || email.trim().length === 0}
         className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
       >
-        {isPending ? "Inviting…" : "Add invite"}
+        {isPending ? "Sending…" : "Send invite"}
       </button>
     </form>
   );

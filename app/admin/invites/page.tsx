@@ -36,8 +36,8 @@ export default async function AdminInvitesPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
         <p className="mb-3 text-xs text-slate-500">
-          Adding an email here lets that person sign up. Everyone else who tries to sign up is blocked
-          automatically. Share the sign-up link with them directly — no email is sent from here.
+          Adding an email lets that person sign up and emails them a link. Everyone else who tries to
+          sign up is blocked. If the message is missing, have them check junk, or use Resend.
         </p>
         <InviteForm />
       </div>

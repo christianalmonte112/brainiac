@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { revokeInvite } from "@/lib/invites/actions";
+import { resendInvite, revokeInvite } from "@/lib/invites/actions";
 
 export interface InviteRow {
   id: string;
@@ -26,18 +26,26 @@ function StatusBadge({ status }: { status: InviteRow["status"] }) {
 
 export function InviteList({ invites }: { invites: InviteRow[] }) {
   const [error, setError] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleRevoke(id: string) {
+  function run(
+    key: string,
+    action: () => Promise<{ ok: boolean; error?: string }>,
+    success?: string,
+  ) {
     setError(null);
-    setPendingId(id);
+    setNotice(null);
+    setPendingKey(key);
     startTransition(async () => {
-      const result = await revokeInvite(id);
+      const result = await action();
       if (!result.ok) {
         setError(result.error ?? "Something went wrong.");
+      } else if (success) {
+        setNotice(success);
       }
-      setPendingId(null);
+      setPendingKey(null);
     });
   }
 
@@ -52,6 +60,7 @@ export function InviteList({ invites }: { invites: InviteRow[] }) {
   return (
     <div className="flex flex-col gap-2">
       {error && <p className="text-xs text-rose-600">{error}</p>}
+      {notice && <p className="text-xs text-emerald-600">{notice}</p>}
       {invites.map((invite) => (
         <div
           key={invite.id}
@@ -62,14 +71,26 @@ export function InviteList({ invites }: { invites: InviteRow[] }) {
             <StatusBadge status={invite.status} />
           </div>
           {invite.status === "PENDING" && (
-            <button
-              type="button"
-              onClick={() => handleRevoke(invite.id)}
-              disabled={isPending && pendingId === invite.id}
-              className="shrink-0 text-xs font-medium text-rose-600 transition-colors hover:text-rose-800 disabled:opacity-60"
-            >
-              {isPending && pendingId === invite.id ? "Revoking…" : "Revoke"}
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  run(`${invite.id}:resend`, () => resendInvite(invite.id), `Emailed ${invite.email} again.`)
+                }
+                disabled={isPending && pendingKey?.startsWith(invite.id)}
+                className="text-xs font-medium text-slate-700 transition-colors hover:text-slate-900 disabled:opacity-60"
+              >
+                {isPending && pendingKey === `${invite.id}:resend` ? "Sending…" : "Resend"}
+              </button>
+              <button
+                type="button"
+                onClick={() => run(`${invite.id}:revoke`, () => revokeInvite(invite.id))}
+                disabled={isPending && pendingKey?.startsWith(invite.id)}
+                className="text-xs font-medium text-rose-600 transition-colors hover:text-rose-800 disabled:opacity-60"
+              >
+                {isPending && pendingKey === `${invite.id}:revoke` ? "Revoking…" : "Revoke"}
+              </button>
+            </div>
           )}
         </div>
       ))}
