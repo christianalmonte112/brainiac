@@ -328,7 +328,7 @@ export default async function ProgressPage() {
             currentWPM={currentWPM}
             baselineWPM={baseline.readingSpeedWPM}
             streak={streak}
-            avgQuizScorePercent={avgQuizScore}
+            comprehensionPercent={comprehensionScore}
             earnedBadgeKeys={[...earnedBadgeKeys]}
           />
         </div>

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { getAnthropic } from "@/lib/ai/client";
-import { QUIZ_GENERATOR_MODEL, QUIZ_GENERATOR_SYSTEM_PROMPT } from "@/lib/prompts/quiz";
+import { QUIZ_GENERATOR_MODEL, QUIZ_GENERATOR_SYSTEM_PROMPT, QUIZ_QUESTION_COUNT } from "@/lib/prompts/quiz";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/ratelimit";
 
@@ -43,11 +43,11 @@ export async function POST(request: Request) {
 
   // Cap document text sent to Claude to keep costs predictable.
   const docText = session.sourceText.slice(0, 12000);
-  const userMessage = `DOCUMENT TITLE: ${session.title}\n\nDOCUMENT TEXT:\n${docText}\n\nGenerate 5 quiz questions about this document.`;
+  const userMessage = `DOCUMENT TITLE: ${session.title}\n\nDOCUMENT TEXT:\n${docText}\n\nGenerate ${QUIZ_QUESTION_COUNT} quiz questions about this document.`;
 
   const message = await getAnthropic().messages.create({
     model: QUIZ_GENERATOR_MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: QUIZ_GENERATOR_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
   });
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         q.correctIndex >= 0 &&
         q.correctIndex <= 3,
     )
-    .slice(0, 5);
+    .slice(0, QUIZ_QUESTION_COUNT);
 
   if (validQuestions.length === 0) {
     return Response.json({ error: "No valid questions parsed" }, { status: 502 });

@@ -8,7 +8,7 @@ interface ShareCardProps {
   currentWPM: number | null;
   baselineWPM: number;
   streak: number;
-  avgQuizScorePercent: number | null;
+  comprehensionPercent: number | null;
   earnedBadgeKeys: string[];
 }
 
@@ -26,7 +26,7 @@ export function ShareCard({
   currentWPM,
   baselineWPM,
   streak,
-  avgQuizScorePercent,
+  comprehensionPercent,
   earnedBadgeKeys,
 }: ShareCardProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -177,7 +177,7 @@ export function ShareCard({
         <g transform="translate(90 880)">
           {[
             { label: "STREAK", value: `${streak}d` },
-            { label: "QUIZ AVG", value: avgQuizScorePercent !== null ? `${avgQuizScorePercent}%` : "—" },
+            { label: "COMPREHENSION", value: comprehensionPercent !== null ? `${comprehensionPercent}%` : "—" },
             { label: "BADGES", value: `${earnedBadgeKeys.length}/${BADGE_DEFINITIONS.length}` },
           ].map((stat, i) => (
             <g key={stat.label} transform={`translate(${i * 300} 0)`}>

@@ -5,6 +5,8 @@ export interface QuestionResult {
   prompt: string;
   orderIndex: number;
   isCorrect: boolean;
+  /** Quiz length. Older document quizzes have 5 questions; new ones have 8. */
+  questionCount?: number;
 }
 
 export interface WeakAreaInsight {
@@ -55,12 +57,20 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
 /** Minimum consecutive correct reviews before a word counts as mastered. */
 export const MASTERED_MIN_STREAK = 2;
 
+/** Document quizzes generated before the 8-question mix. Slot 4 is inference. */
+const LEGACY_QUIZ_QUESTION_COUNT = 5;
+
 /**
  * Classifies a quiz question when `type` isn't stored in the DB. Uses prompt
- * keywords first, then falls back to the generator's intended slot order
- * (0–1 recall, 2–3 comprehension, 4 inference).
+ * keywords first, then the generator's slot order.
+ * Five-question quizzes: 0–1 recall, 2–3 comprehension, 4 inference.
+ * Eight-question quizzes: 0–1 recall, 2–5 comprehension, 6–7 inference.
  */
-export function classifyQuestionType(prompt: string, orderIndex: number): QuestionType {
+export function classifyQuestionType(
+  prompt: string,
+  orderIndex: number,
+  questionCount: number = LEGACY_QUIZ_QUESTION_COUNT,
+): QuestionType {
   const lower = prompt.toLowerCase();
 
   if (
@@ -83,7 +93,8 @@ export function classifyQuestionType(prompt: string, orderIndex: number): Questi
     return "comprehension";
   }
 
-  if (orderIndex >= 4) return "inference";
+  const inferenceFrom = questionCount > LEGACY_QUIZ_QUESTION_COUNT ? 6 : 4;
+  if (orderIndex >= inferenceFrom) return "inference";
   if (orderIndex >= 2) return "comprehension";
   return "recall";
 }
@@ -132,7 +143,7 @@ export function analyzeWeakAreas(results: QuestionResult[]): WeakAreaInsight[] {
   const buckets = new Map<QuestionType, { correct: number; total: number }>();
 
   for (const result of results) {
-    const type = classifyQuestionType(result.prompt, result.orderIndex);
+    const type = classifyQuestionType(result.prompt, result.orderIndex, result.questionCount);
     const bucket = buckets.get(type) ?? { correct: 0, total: 0 };
     bucket.total += 1;
     if (result.isCorrect) bucket.correct += 1;
@@ -173,7 +184,7 @@ export function computeComprehensionScore(
 ): number | null {
   const summaries = summaryScores.filter((score) => score > 0);
   const understanding = questionResults.filter(
-    (result) => classifyQuestionType(result.prompt, result.orderIndex) !== "recall",
+    (result) => classifyQuestionType(result.prompt, result.orderIndex, result.questionCount) !== "recall",
   );
 
   const summaryAvg =
@@ -195,7 +206,7 @@ export function accuracyForQuestionType(
   type: QuestionType,
 ): number | null {
   const matching = results.filter(
-    (r) => classifyQuestionType(r.prompt, r.orderIndex) === type,
+    (r) => classifyQuestionType(r.prompt, r.orderIndex, r.questionCount) === type,
   );
   if (matching.length === 0) return null;
   const correct = matching.filter((r) => r.isCorrect).length;
@@ -368,12 +379,14 @@ export function collectQuestionResultsFromAttempts(
     if (!Array.isArray(attempt.answers)) continue;
 
     const answers = attempt.answers as number[];
+    const questionCount = attempt.quiz.questions.length;
     for (const question of attempt.quiz.questions) {
       const selected = answers[question.orderIndex] ?? -1;
       results.push({
         prompt: question.prompt,
         orderIndex: question.orderIndex,
         isCorrect: selected === question.correctIndex,
+        questionCount,
       });
     }
   }

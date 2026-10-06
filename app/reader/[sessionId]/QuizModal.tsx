@@ -40,7 +40,7 @@ interface QuizModalProps {
 /**
  * Retention quiz modal (F-006). Presented after a reading session completes.
  *
- * One question at a time with a progress bar. After all 5 answers are
+ * One question at a time with a progress bar. After every answer is
  * selected the quiz is submitted, graded server-side, and a results screen
  * shows the score with explanations for wrong answers.
  */
