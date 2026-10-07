@@ -43,11 +43,13 @@ describe("resolveWordLookup — fallback orchestration", () => {
     expect(fallback).toHaveBeenCalledTimes(1);
   });
 
-  it("propagates a primary-lookup error rather than silently falling back on a real failure (not the same as a clean 404 miss)", async () => {
+  it("asks the fallback to define the word when the primary dictionary errors", async () => {
     const primary = vi.fn().mockRejectedValue(new Error("Dictionary lookup failed with status 500."));
-    const fallback = vi.fn();
+    const fallback = vi.fn().mockResolvedValue(fakeResult("word"));
 
-    await expect(resolveWordLookup("word", primary, fallback)).rejects.toThrow("status 500");
-    expect(fallback).not.toHaveBeenCalled();
+    const result = await resolveWordLookup("word", primary, fallback);
+
+    expect(fallback).toHaveBeenCalledWith("word");
+    expect(result).toEqual(fakeResult("word"));
   });
 });
