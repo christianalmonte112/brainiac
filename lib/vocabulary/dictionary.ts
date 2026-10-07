@@ -51,7 +51,10 @@ const MAX_SYNONYMS = 8;
 /** The free-API lookup alone, with no fallback — exported for the coverage-audit script (scripts/audit-dictionary-coverage.mjs) to measure raw miss rate. */
 export async function lookupFreeApiWord(word: string): Promise<WordLookupResult | null> {
   const response = await fetch(`${DICTIONARY_API_BASE}/${encodeURIComponent(word)}`, {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Brainiac/0.1 (reading comprehension)",
+    },
   });
 
   if (response.status === 404) {
@@ -106,8 +109,13 @@ export async function resolveWordLookup(
   lookupPrimary: (word: string) => Promise<WordLookupResult | null>,
   lookupFallback: (word: string) => Promise<WordLookupResult | null>,
 ): Promise<WordLookupResult | null> {
-  const primaryResult = await lookupPrimary(word);
-  if (primaryResult) return primaryResult;
+  try {
+    const primaryResult = await lookupPrimary(word);
+    if (primaryResult) return primaryResult;
+  } catch {
+    // A dead dictionary is not the same as "this word has no meaning."
+    // Claude still gets a chance to define it.
+  }
   return lookupFallback(word);
 }
 

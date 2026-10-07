@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { submitChunkSummary } from "../actions";
 import { extractCandidateKeywords } from "@/lib/reading-sessions/keywords";
+import { MAX_CHUNK_SUMMARY_WORDS } from "@/lib/reading-sessions/schema";
+import { countWords } from "@/lib/text/word-count";
 import { ClickableParagraph } from "./ClickableParagraph";
 import { VoiceReader } from "./VoiceReader";
 import { VoiceSummary } from "./VoiceSummary";
@@ -84,7 +86,10 @@ export function ChunkBody({
 
   const candidateKeywords = useMemo(() => extractCandidateKeywords(safeChunkText), [safeChunkText]);
   const isLastChunk = chunkIndex === totalChunks - 1;
-  const canSubmit = mode === "summary" ? summaryText.trim().length > 0 : selectedKeywords.length === 3;
+  const summaryWordCount = countWords(summaryText);
+  const summaryTooLong = summaryWordCount > MAX_CHUNK_SUMMARY_WORDS;
+  const canSubmit =
+    mode === "summary" ? summaryWordCount > 0 && !summaryTooLong : selectedKeywords.length === 3;
 
   function toggleKeyword(word: string) {
     setSelectedKeywords((prev) => {
@@ -255,14 +260,18 @@ export function ChunkBody({
           </div>
 
           {mode === "summary" ? (
-            <textarea
-              value={summaryText}
-              onChange={(e) => setSummaryText(e.target.value)}
-              placeholder="Summarize this section in one sentence..."
-              maxLength={280}
-              rows={2}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
+            <>
+              <textarea
+                value={summaryText}
+                onChange={(e) => setSummaryText(e.target.value)}
+                placeholder="Summarize this section in your own words."
+                rows={8}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <p className={`text-xs ${summaryTooLong ? "text-red-600" : "text-slate-500"}`}>
+                {summaryWordCount.toLocaleString()} / {MAX_CHUNK_SUMMARY_WORDS.toLocaleString()} words
+              </p>
+            </>
           ) : mode === "voice" ? (
             <VoiceSummary onUseSummary={handleVoiceSummarySubmit} disabled={isPending} />
           ) : (

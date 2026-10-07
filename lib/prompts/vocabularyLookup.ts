@@ -44,7 +44,8 @@ export async function lookupWordWithClaudeFallback(word: string): Promise<WordLo
 
   try {
     const cleaned = raw.text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleaned) as {
+    const jsonText = cleaned.match(/\{[\s\S]*\}/)?.[0] ?? cleaned;
+    const parsed = JSON.parse(jsonText) as {
       found?: boolean;
       partOfSpeech?: string | null;
       definition?: string;
