@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { computeDelta } from "@/lib/progress/range";
 import { BADGE_BY_KEY, BADGE_DEFINITIONS } from "@/lib/badges/definitions";
+import { BadgeCoinMark } from "./BadgeCoin";
 
 interface ShareCardProps {
   currentWPM: number | null;
@@ -35,6 +36,10 @@ export function ShareCard({
 
   const delta = currentWPM !== null ? computeDelta(currentWPM, baselineWPM) : null;
   const up = (delta?.abs ?? 0) >= 0;
+  const deltaLabel = delta
+    ? `${up ? "▲" : "▼"} ${delta.abs >= 0 ? "+" : ""}${delta.abs} · ${delta.pct >= 0 ? "+" : ""}${delta.pct.toFixed(0)}% vs baseline`
+    : "";
+  const deltaPillWidth = Math.min(900, Math.ceil(deltaLabel.length * 22) + 64);
   const displayedBadges = earnedBadgeKeys
     .map((key) => BADGE_BY_KEY.get(key))
     .filter((b): b is NonNullable<typeof b> => b !== undefined)
@@ -137,44 +142,43 @@ export function ShareCard({
           MY READING PROGRESS
         </text>
 
-        {/* Headline WPM */}
-        <text x="90" y="480" fill={MUTED} fontFamily="ui-monospace, monospace" fontSize="30" letterSpacing="4">
+        {/* Headline WPM. The number's baseline has to sit well below this label —
+            a 190px glyph climbs back up the card and otherwise covers the words. */}
+        <text x="90" y="430" fill={MUTED} fontFamily="ui-monospace, monospace" fontSize="30" letterSpacing="4">
           READING SPEED
         </text>
-        <text x="90" y="640" fill={INK} fontFamily="ui-monospace, monospace" fontSize="220" fontWeight="700">
+        <text x="90" y="680" fill={INK} fontFamily="ui-monospace, monospace" fontSize="190" fontWeight="700">
           {currentWPM ?? "—"}
         </text>
-        <text x="90" y="700" fill={MUTED} fontFamily="ui-monospace, monospace" fontSize="34">
+        <text x="90" y="750" fill={MUTED} fontFamily="ui-monospace, monospace" fontSize="34">
           words per minute
         </text>
 
         {delta && (
-          <g transform="translate(90 740)">
+          <g transform="translate(90 800)">
             <rect
-              width="420"
-              height="80"
+              width={deltaPillWidth}
+              height="76"
               rx="16"
               fill={up ? INK : "none"}
               stroke={up ? "none" : INK}
               strokeWidth="3"
             />
             <text
-              x="30"
-              y="52"
+              x="32"
+              y="49"
               fill={up ? "#060608" : INK}
               fontFamily="ui-monospace, monospace"
-              fontSize="36"
+              fontSize="32"
               fontWeight="700"
             >
-              {up ? "▲" : "▼"} {delta.abs >= 0 ? "+" : ""}
-              {delta.abs} · {delta.pct >= 0 ? "+" : ""}
-              {delta.pct.toFixed(0)}% vs baseline
+              {deltaLabel}
             </text>
           </g>
         )}
 
         {/* Stat chips */}
-        <g transform="translate(90 880)">
+        <g transform="translate(90 930)">
           {[
             { label: "STREAK", value: `${streak}d` },
             { label: "COMPREHENSION", value: comprehensionPercent !== null ? `${comprehensionPercent}%` : "—" },
@@ -198,9 +202,9 @@ export function ShareCard({
               RECENT BADGES
             </text>
             {displayedBadges.map((badge, i) => (
-              <text key={badge.key} x={i * 130} y="90" fontSize="80">
-                {badge.icon}
-              </text>
+              <g key={badge.key} transform={`translate(${i * 118} 36)`}>
+                <BadgeCoinMark badgeKey={badge.key} earned animate={false} />
+              </g>
             ))}
           </g>
         )}

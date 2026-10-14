@@ -12,7 +12,7 @@ export interface BadgeDefinition {
   category: BadgeCategory;
   label: string;
   description: string;
-  /** Single emoji glyph — keeps this dependency-free and legible at any size, consistent with the rest of the app's monochrome/text-forward style. */
+  /** Kept for the catalog. The shelf and share card draw BadgeCoin instead of this glyph. */
   icon: string;
 }
 

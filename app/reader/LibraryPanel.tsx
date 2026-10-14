@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FileText, Folder, Pin, Search, Settings, SlidersHorizontal } from "lucide-react";
+import { FileText, Folder, Pin, Search, SlidersHorizontal } from "lucide-react";
 import type { ReadingSession } from "@prisma/client";
 import { BrainLogo } from "@/components/BrainLogo";
 import { NewSessionForm } from "./NewSessionForm";
@@ -52,9 +52,6 @@ export function LibraryPanel({ sessions, baselineWPM }: LibraryPanelProps) {
             <BrainLogo size={32} className="h-8 w-8 shrink-0 rounded-[8px]" />
             <span className="text-lg font-semibold tracking-tight text-black">Brainiac</span>
           </div>
-          <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400">
-            Read faster. Think deeper.
-          </p>
         </Link>
 
         <NewSessionForm />
@@ -130,13 +127,6 @@ export function LibraryPanel({ sessions, baselineWPM }: LibraryPanelProps) {
 
       <div className="mt-auto space-y-3 border-t border-neutral-100 px-6 py-4">
         <BaselineSparklineCard baselineWPM={baselineWPM} />
-        <Link
-          href="/reader/progress"
-          className="flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-black"
-        >
-          <Settings className="h-4 w-4" strokeWidth={1.75} />
-          Settings
-        </Link>
       </div>
     </aside>
   );
