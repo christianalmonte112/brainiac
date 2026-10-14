@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { resendInvite, revokeInvite } from "@/lib/invites/actions";
+import { revokeInvite } from "@/lib/invites/actions";
 
 export interface InviteRow {
   id: string;
@@ -72,16 +72,6 @@ export function InviteList({ invites }: { invites: InviteRow[] }) {
           </div>
           {invite.status === "PENDING" && (
             <div className="flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  run(`${invite.id}:resend`, () => resendInvite(invite.id), `Emailed ${invite.email} again.`)
-                }
-                disabled={isPending && pendingKey?.startsWith(invite.id)}
-                className="text-xs font-medium text-slate-700 transition-colors hover:text-slate-900 disabled:opacity-60"
-              >
-                {isPending && pendingKey === `${invite.id}:resend` ? "Sending…" : "Resend"}
-              </button>
               <button
                 type="button"
                 onClick={() => run(`${invite.id}:revoke`, () => revokeInvite(invite.id))}

@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin/requireAdmin";
-import { deliverInviteEmail, revokeDeliveredInvite } from "./deliver";
-import { describeInviteDeliveryError } from "./deliveryError";
+import { revokeDeliveredInvite } from "./deliver";
 import { normalizeInviteEmail } from "./validate";
 
 export interface InviteActionResult {
@@ -12,7 +11,7 @@ export interface InviteActionResult {
   error?: string;
 }
 
-/** Adds an email to the beta allowlist and emails a sign-up link. */
+/** Adds an email to the beta allowlist. Sign-up is the public link; no mail is sent. */
 export async function createInvite(rawEmail: string): Promise<InviteActionResult> {
   const adminUserId = await requireAdmin();
   if (!adminUserId) {
@@ -29,35 +28,6 @@ export async function createInvite(rawEmail: string): Promise<InviteActionResult
   } catch {
     // Most likely the unique constraint on email — already invited.
     return { ok: false, error: "That email has already been invited." };
-  }
-
-  try {
-    await deliverInviteEmail(normalized.email);
-  } catch (error) {
-    await prisma.invite.deleteMany({ where: { email: normalized.email, status: "PENDING" } });
-    return { ok: false, error: describeInviteDeliveryError(error) };
-  }
-
-  revalidatePath("/admin/invites");
-  return { ok: true };
-}
-
-/** Sends the sign-up email again for an invite that is still pending. */
-export async function resendInvite(inviteId: string): Promise<InviteActionResult> {
-  const adminUserId = await requireAdmin();
-  if (!adminUserId) {
-    return { ok: false, error: "Not authorized." };
-  }
-
-  const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
-  if (!invite || invite.status !== "PENDING") {
-    return { ok: false, error: "Invite not found or already accepted." };
-  }
-
-  try {
-    await deliverInviteEmail(invite.email, true);
-  } catch (error) {
-    return { ok: false, error: describeInviteDeliveryError(error) };
   }
 
   revalidatePath("/admin/invites");
