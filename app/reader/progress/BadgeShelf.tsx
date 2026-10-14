@@ -46,10 +46,6 @@ function ShelfCard({
   const playId = useRef(0);
 
   useEffect(() => {
-    if (!interactive) setPose("end");
-  }, [interactive]);
-
-  useEffect(() => {
     return () => {
       if (returnTimer.current !== null) window.clearTimeout(returnTimer.current);
     };
