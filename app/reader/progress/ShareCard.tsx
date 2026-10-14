@@ -203,7 +203,7 @@ export function ShareCard({
             </text>
             {displayedBadges.map((badge, i) => (
               <g key={badge.key} transform={`translate(${i * 118} 36)`}>
-                <BadgeCoinMark badgeKey={badge.key} earned animate={false} />
+                <BadgeCoinMark badgeKey={badge.key} earned animate={false} pose="end" motion={false} />
               </g>
             ))}
           </g>

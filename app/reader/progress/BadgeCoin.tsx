@@ -1,7 +1,9 @@
 /**
  * One metal coin for every badge. The face changes; the coin does not.
- * Streak faces can flicker. The share card uses the same drawing with the
- * flame held still, so a saved image matches the shelf.
+ *
+ * On the shelf, an earned coin rests on the first frame and plays to the
+ * finished frame on hover. The top badge in a set stays on that frame.
+ * The share card always draws the finished frame, still.
  */
 
 const FLAME_CSS = `
@@ -21,27 +23,34 @@ const FLAME_CSS = `
 }
 `;
 
+export type BadgePose = "start" | "end";
+
 interface MarkProps {
   badgeKey: string;
   earned: boolean;
   animate: boolean;
+  pose: BadgePose;
+  /** When false, the finished frame is plain SVG so a saved card cannot move. */
+  motion: boolean;
 }
 
 export function BadgeCoin({
   badgeKey,
   earned,
   animate = false,
+  pose,
+  motion,
   className,
 }: MarkProps & { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       {animate ? <style>{FLAME_CSS}</style> : null}
-      <BadgeCoinMark badgeKey={badgeKey} earned={earned} animate={animate} />
+      <BadgeCoinMark badgeKey={badgeKey} earned={earned} animate={animate} pose={pose} motion={motion} />
     </svg>
   );
 }
 
-export function BadgeCoinMark({ badgeKey, earned, animate }: MarkProps) {
+export function BadgeCoinMark({ badgeKey, earned, animate, pose, motion }: MarkProps) {
   const ink = earned ? "#f5f5f5" : "#737373";
   const face = earned ? "#101012" : "#f4f4f5";
   const rim = earned ? "#f5f5f5" : "#c4c4c4";
@@ -62,7 +71,14 @@ export function BadgeCoinMark({ badgeKey, earned, animate }: MarkProps) {
           strokeLinecap="round"
         />
       ) : null}
-      <Face badgeKey={badgeKey} ink={ink} cutout={face} animate={animate && earned} />
+      <Face
+        badgeKey={badgeKey}
+        ink={ink}
+        cutout={face}
+        animate={animate && earned}
+        pose={pose}
+        motion={motion}
+      />
     </g>
   );
 }
@@ -72,11 +88,15 @@ function Face({
   ink,
   cutout,
   animate,
+  pose,
+  motion,
 }: {
   badgeKey: string;
   ink: string;
   cutout: string;
   animate: boolean;
+  pose: BadgePose;
+  motion: boolean;
 }) {
   switch (badgeKey) {
     case "streak_3":
@@ -86,25 +106,25 @@ function Face({
     case "streak_30":
       return <HouseFire ink={ink} cutout={cutout} animate={animate} />;
     case "sessions_1":
-      return <OpenBook ink={ink} />;
+      return <OpenBook ink={ink} pose={pose} motion={motion} />;
     case "sessions_10":
-      return <BookStack ink={ink} />;
+      return <BookStack ink={ink} pose={pose} motion={motion} />;
     case "sessions_25":
-      return <BookShelf ink={ink} />;
+      return <BookPile ink={ink} pose={pose} motion={motion} />;
     case "speed_10":
-      return <Gauge ink={ink} level="low" />;
+      return <Gauge ink={ink} level="low" pose={pose} motion={motion} />;
     case "speed_25":
-      return <Gauge ink={ink} level="mid" />;
+      return <Gauge ink={ink} level="mid" pose={pose} motion={motion} />;
     case "speed_50":
-      return <Gauge ink={ink} level="high" />;
+      return <Gauge ink={ink} level="high" pose={pose} motion={motion} />;
     case "comprehension_80":
-      return <Lens ink={ink} doubled={false} />;
+      return <AlertMind ink={ink} pose={pose} motion={motion} />;
     case "comprehension_90":
-      return <Lens ink={ink} doubled />;
+      return <TargetMind ink={ink} pose={pose} motion={motion} />;
     case "vocabulary_10":
-      return <WordTile ink={ink} cutout={cutout} fan={false} />;
+      return <WordTile ink={ink} cutout={cutout} fan={false} pose={pose} motion={motion} />;
     case "vocabulary_50":
-      return <WordTile ink={ink} cutout={cutout} fan />;
+      return <WordTile ink={ink} cutout={cutout} fan pose={pose} motion={motion} />;
     default:
       return null;
   }
@@ -169,48 +189,168 @@ function HouseFire({ ink, cutout, animate }: { ink: string; cutout: string; anim
   );
 }
 
-function OpenBook({ ink }: { ink: string }) {
+function OpenBook({ ink, pose, motion }: { ink: string; pose: BadgePose; motion: boolean }) {
+  const open = pose === "end";
   return (
     <g fill="none" stroke={ink} strokeWidth="1.7" strokeLinejoin="round">
-      <path d="M18 40 L32 34 L32 22 L18 28 Z" />
-      <path d="M46 40 L32 34 L32 22 L46 28 Z" />
+      <g transform={`rotate(${open ? 0 : 58} 32 28)`}>
+        {motion ? (
+          <animateTransform
+            key={pose}
+            attributeName="transform"
+            type="rotate"
+            from={open ? "58 32 28" : "0 32 28"}
+            to={open ? "0 32 28" : "58 32 28"}
+            dur="0.45s"
+            fill="freeze"
+          />
+        ) : null}
+        <path d="M18 40 L32 34 L32 22 L18 28 Z" />
+      </g>
+      <g transform={`rotate(${open ? 0 : -58} 32 28)`}>
+        {motion ? (
+          <animateTransform
+            key={pose}
+            attributeName="transform"
+            type="rotate"
+            from={open ? "-58 32 28" : "0 32 28"}
+            to={open ? "0 32 28" : "-58 32 28"}
+            dur="0.45s"
+            fill="freeze"
+          />
+        ) : null}
+        <path d="M46 40 L32 34 L32 22 L46 28 Z" />
+      </g>
       <path d="M32 22 V34" />
     </g>
   );
 }
 
-function BookStack({ ink }: { ink: string }) {
+function BookStack({ ink, pose, motion }: { ink: string; pose: BadgePose; motion: boolean }) {
+  const layers = [
+    { x: 20, y: 40, w: 24, rise: 0, delay: "0s" },
+    { x: 21, y: 33, w: 22, rise: 7, delay: "0.1s" },
+    { x: 20, y: 26, w: 24, rise: 14, delay: "0.2s" },
+  ];
+  const stacked = pose === "end";
+
   return (
     <g fill="none" stroke={ink} strokeWidth="1.7" strokeLinejoin="round">
-      <path d="M20 24 H44 V29 H20 Z" />
-      <path d="M22 32 H42 V37 H22 Z" />
-      <path d="M20 40 H44 V45 H20 Z" />
+      {layers.map((layer) => (
+        <rect key={layer.y} x={layer.x} y={stacked ? layer.y : layer.y + layer.rise} width={layer.w} height="5">
+          {motion ? (
+            <animate
+              key={pose}
+              attributeName="y"
+              from={stacked ? layer.y + layer.rise : layer.y}
+              to={stacked ? layer.y : layer.y + layer.rise}
+              dur="0.4s"
+              begin={stacked ? layer.delay : "0s"}
+              fill="freeze"
+            />
+          ) : null}
+        </rect>
+      ))}
     </g>
   );
 }
 
-function BookShelf({ ink }: { ink: string }) {
+function BookPile({ ink, pose, motion }: { ink: string; pose: BadgePose; motion: boolean }) {
+  const layers = [
+    { x: 18, y: 42, w: 28, rise: 0, delay: "0s" },
+    { x: 22, y: 36, w: 22, rise: 6, delay: "0.08s" },
+    { x: 17, y: 30, w: 27, rise: 12, delay: "0.16s" },
+    { x: 23, y: 24, w: 20, rise: 18, delay: "0.24s" },
+    { x: 19, y: 18, w: 24, rise: 24, delay: "0.32s" },
+  ];
+  const piled = pose === "end";
+
   return (
-    <g fill={ink}>
-      <rect x="18" y="44" width="28" height="1.8" />
-      <rect x="20" y="30" width="4" height="14" />
-      <rect x="26" y="26" width="4" height="18" />
-      <rect x="32" y="32" width="4" height="12" />
-      <rect x="38" y="24" width="4" height="20" />
+    <g fill="none" stroke={ink} strokeWidth="1.6" strokeLinejoin="round">
+      {layers.map((layer) => (
+        <rect key={layer.y} x={layer.x} y={piled ? layer.y : layer.y + layer.rise} width={layer.w} height="5">
+          {motion ? (
+            <animate
+              key={pose}
+              attributeName="y"
+              from={piled ? layer.y + layer.rise : layer.y}
+              to={piled ? layer.y : layer.y + layer.rise}
+              dur="0.4s"
+              begin={piled ? layer.delay : "0s"}
+              fill="freeze"
+            />
+          ) : null}
+        </rect>
+      ))}
     </g>
   );
 }
 
-function Gauge({ ink, level }: { ink: string; level: "low" | "mid" | "high" }) {
-  const tip = level === "low" ? { x: 22, y: 30 } : level === "mid" ? { x: 32, y: 22 } : { x: 43, y: 29 };
+const GAUGE_ARC = 44;
+
+function Gauge({
+  ink,
+  level,
+  pose,
+  motion,
+}: {
+  ink: string;
+  level: "low" | "mid" | "high";
+  pose: BadgePose;
+  motion: boolean;
+}) {
+  const filled = pose === "end";
+  const turn = !filled ? 0 : level === "low" ? -50 : level === "mid" ? -90 : -180;
+  const revealed = !filled ? GAUGE_ARC : level === "low" ? GAUGE_ARC * 0.72 : level === "mid" ? GAUGE_ARC * 0.5 : 0;
+
   return (
     <g fill="none" stroke={ink} strokeLinecap="round">
-      <path d="M 18 40 A 14 14 0 0 1 46 40" strokeOpacity="0.35" strokeWidth="2" />
-      <path d={`M 18 40 A 14 14 0 0 1 ${tip.x} ${tip.y}`} strokeWidth="2.5" />
-      <line x1="32" y1="40" x2={tip.x} y2={tip.y} strokeWidth="1.6" />
+      <path d="M 18 40 A 14 14 0 0 0 46 40" strokeOpacity="0.35" strokeWidth="2" />
+      <path
+        d="M 18 40 A 14 14 0 0 0 46 40"
+        strokeWidth="2.5"
+        strokeDasharray={GAUGE_ARC}
+        strokeDashoffset={revealed}
+      >
+        {motion ? (
+          <animate
+            key={pose}
+            attributeName="stroke-dashoffset"
+            from={filled ? GAUGE_ARC : level === "low" ? GAUGE_ARC * 0.72 : level === "mid" ? GAUGE_ARC * 0.5 : 0}
+            to={revealed}
+            dur="0.55s"
+            fill="freeze"
+          />
+        ) : null}
+      </path>
+      <g transform={`rotate(${turn} 32 40)`}>
+        {motion ? (
+          <animateTransform
+            key={pose}
+            attributeName="transform"
+            type="rotate"
+            from={filled ? "0 32 40" : `${level === "low" ? -50 : level === "mid" ? -90 : -180} 32 40`}
+            to={`${turn} 32 40`}
+            dur="0.55s"
+            fill="freeze"
+          />
+        ) : null}
+        <line x1="32" y1="40" x2="19" y2="40" strokeWidth="1.6" />
+      </g>
       <circle cx="32" cy="40" r="1.7" fill={ink} stroke="none" />
       {level === "high" ? (
-        <g strokeWidth="1.4">
+        <g strokeWidth="1.4" opacity={filled ? 1 : 0}>
+          {motion ? (
+            <animate
+              key={pose}
+              attributeName="opacity"
+              from={filled ? 0 : 1}
+              to={filled ? 1 : 0}
+              dur="0.35s"
+              begin="0.35s"
+              fill="freeze"
+            />
+          ) : null}
           <path d="M14 34 H18" />
           <path d="M13 38 H17" />
         </g>
@@ -219,34 +359,154 @@ function Gauge({ ink, level }: { ink: string; level: "low" | "mid" | "high" }) {
   );
 }
 
-function Lens({ ink, doubled }: { ink: string; doubled: boolean }) {
+function BrainOutline({ ink }: { ink: string }) {
   return (
-    <g fill="none" stroke={ink} strokeLinecap="round">
-      <circle cx="32" cy="32" r={doubled ? 13 : 11} strokeWidth="1.8" />
-      {doubled ? <circle cx="32" cy="32" r="7.5" strokeWidth="1.6" /> : null}
-      <path d="M26 26 L29.5 29.5" strokeWidth="1.5" />
+    <g fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 38 C23 31 26.5 27 32 27 C37.5 27 41 31 41 38 C41 45 37 48 32 48 C27 48 23 45 23 38 Z" />
+      <path d="M32 28 C31 34 33 40 32 47" />
+      <path d="M26 35 C28.5 33 29.5 36 32 34" />
+      <path d="M38 35 C35.5 33 34.5 36 32 36" />
     </g>
   );
 }
 
-function WordTile({ ink, cutout, fan }: { ink: string; cutout: string; fan: boolean }) {
+function AlertMind({ ink, pose, motion }: { ink: string; pose: BadgePose; motion: boolean }) {
+  const awake = pose === "end";
+  return (
+    <g>
+      <BrainOutline ink={ink} />
+      <g
+        fill="none"
+        stroke={ink}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity={awake ? 1 : 0}
+        transform={awake ? "translate(0 0)" : "translate(0 6)"}
+      >
+        {motion ? (
+          <animate
+            key={pose}
+            attributeName="opacity"
+            from={awake ? 0 : 1}
+            to={awake ? 1 : 0}
+            dur="0.35s"
+            fill="freeze"
+          />
+        ) : null}
+        <path d="M27 25 L23 18" />
+        <path d="M32 24 L32 16" />
+        <path d="M37 25 L41 18" />
+      </g>
+    </g>
+  );
+}
+
+function TargetMind({ ink, pose, motion }: { ink: string; pose: BadgePose; motion: boolean }) {
+  const locked = pose === "end";
+  return (
+    <g>
+      <BrainOutline ink={ink} />
+      <g fill="none" stroke={ink} strokeWidth="1.4" strokeLinecap="round" opacity={locked ? 1 : 0}>
+        {motion ? (
+          <animate
+            key={pose}
+            attributeName="opacity"
+            from={locked ? 0 : 1}
+            to={locked ? 1 : 0}
+            dur="0.45s"
+            fill="freeze"
+          />
+        ) : null}
+        <circle cx="32" cy="38" r={locked ? 13 : 18}>
+          {motion ? (
+            <animate
+              key={`${pose}-outer`}
+              attributeName="r"
+              from={locked ? 18 : 13}
+              to={locked ? 13 : 18}
+              dur="0.45s"
+              fill="freeze"
+            />
+          ) : null}
+        </circle>
+        <circle cx="32" cy="38" r={locked ? 7 : 11}>
+          {motion ? (
+            <animate
+              key={`${pose}-inner`}
+              attributeName="r"
+              from={locked ? 11 : 7}
+              to={locked ? 7 : 11}
+              dur="0.45s"
+              fill="freeze"
+            />
+          ) : null}
+        </circle>
+        <path d="M32 23 V27" />
+        <path d="M32 49 V53" />
+        <path d="M17 38 H21" />
+        <path d="M43 38 H47" />
+      </g>
+    </g>
+  );
+}
+
+function WordTile({
+  ink,
+  cutout,
+  fan,
+  pose,
+  motion,
+}: {
+  ink: string;
+  cutout: string;
+  fan: boolean;
+  pose: BadgePose;
+  motion: boolean;
+}) {
   if (!fan) {
+    const written = pose === "end";
     return (
       <g fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round">
         <rect x="22" y="24" width="20" height="16" rx="2" />
-        <path d="M26 32 H38" />
+        <path d="M26 32 H38" strokeDasharray="12" strokeDashoffset={written ? 0 : 12}>
+          {motion ? (
+            <animate
+              key={pose}
+              attributeName="stroke-dashoffset"
+              from={written ? 12 : 0}
+              to={written ? 0 : 12}
+              dur="0.45s"
+              fill="freeze"
+            />
+          ) : null}
+        </path>
       </g>
     );
   }
 
+  const spread = pose === "end";
+  const wing = (degrees: number, delay: string) => (
+    <>
+      {motion ? (
+        <animateTransform
+          key={pose}
+          attributeName="transform"
+          type="rotate"
+          from={spread ? `0 32 42` : `${degrees} 32 42`}
+          to={spread ? `${degrees} 32 42` : "0 32 42"}
+          dur="0.45s"
+          begin={spread ? delay : "0s"}
+          fill="freeze"
+        />
+      ) : null}
+      <rect x="25" y="24" width="14" height="18" rx="1.5" />
+    </>
+  );
+
   return (
     <g fill="none" stroke={ink} strokeWidth="1.5">
-      <g transform="rotate(-16 32 34)">
-        <rect x="24" y="26" width="14" height="18" rx="1.5" />
-      </g>
-      <g transform="rotate(16 32 34)">
-        <rect x="26" y="26" width="14" height="18" rx="1.5" />
-      </g>
+      <g transform={spread ? "rotate(-16 32 42)" : "rotate(0 32 42)"}>{wing(-16, "0.05s")}</g>
+      <g transform={spread ? "rotate(16 32 42)" : "rotate(0 32 42)"}>{wing(16, "0.14s")}</g>
       <rect x="25" y="24" width="14" height="18" rx="1.5" fill={cutout} />
       <path d="M28 33 H36" strokeLinecap="round" />
     </g>
