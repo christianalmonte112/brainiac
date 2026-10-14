@@ -1,4 +1,5 @@
 import { BADGE_DEFINITIONS } from "@/lib/badges/definitions";
+import { BadgeCoin } from "./BadgeCoin";
 
 interface BadgeShelfProps {
   earnedKeys: Set<string>;
@@ -23,9 +24,12 @@ export function BadgeShelf({ earnedKeys }: BadgeShelfProps) {
               earned ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-400"
             }`}
           >
-            <span className={`text-2xl ${earned ? "" : "grayscale opacity-50"}`} aria-hidden="true">
-              {badge.icon}
-            </span>
+            <BadgeCoin
+              badgeKey={badge.key}
+              earned={earned}
+              animate={earned && badge.category === "streak"}
+              className="h-12 w-12"
+            />
             <p className={`text-sm font-semibold ${earned ? "text-white" : "text-slate-500"}`}>{badge.label}</p>
             <p className={`text-xs ${earned ? "text-slate-300" : "text-slate-400"}`}>{badge.description}</p>
           </div>
