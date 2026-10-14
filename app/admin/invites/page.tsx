@@ -36,8 +36,8 @@ export default async function AdminInvitesPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
         <p className="mb-3 text-xs text-slate-500">
-          Adding an email lets that person sign up and emails them a link. Everyone else who tries to
-          sign up is blocked. If the message is missing, have them check junk, or use Resend.
+          Adding an email lets that person sign up at https://brainiac-inky.vercel.app/sign-up. No email
+          is sent. Everyone else who tries to sign up is blocked.
         </p>
         <InviteForm />
       </div>
