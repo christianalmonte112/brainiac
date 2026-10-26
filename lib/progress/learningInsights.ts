@@ -182,7 +182,7 @@ export function computeComprehensionScore(
   summaryScores: number[],
   questionResults: QuestionResult[],
 ): number | null {
-  const summaries = summaryScores.filter((score) => score > 0);
+  const summaries = summaryScores.filter((score) => Number.isFinite(score) && score >= 0 && score <= 100);
   const understanding = questionResults.filter(
     (result) => classifyQuestionType(result.prompt, result.orderIndex, result.questionCount) !== "recall",
   );
@@ -302,7 +302,7 @@ export interface BuildSessionReportInput {
 
 /** Post-quiz learning summary shown on the results screen. */
 export function buildSessionLearningReport(input: BuildSessionReportInput): SessionLearningReport {
-  const meaningfulChunks = input.chunkScores.filter((c) => c.aiScore !== null && c.aiScore > 0);
+  const meaningfulChunks = input.chunkScores.filter((c) => c.aiScore !== null);
   const chunkSummaryAvg =
     meaningfulChunks.length > 0
       ? Math.round(meaningfulChunks.reduce((sum, c) => sum + (c.aiScore ?? 0), 0) / meaningfulChunks.length)
