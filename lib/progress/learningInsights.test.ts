@@ -48,8 +48,13 @@ describe("computeComprehensionScore", () => {
     expect(computeComprehensionScore([70, 90], [])).toBe(80);
   });
 
+  it("includes genuine zero grades in the average", () => {
+    expect(computeComprehensionScore([0, 100], [])).toBe(50);
+    expect(computeComprehensionScore([0], [])).toBe(0);
+  });
+
   it("returns null when nothing has been scored", () => {
-    expect(computeComprehensionScore([0], [])).toBeNull();
+    expect(computeComprehensionScore([], [])).toBeNull();
   });
 });
 
@@ -200,11 +205,23 @@ describe("buildSessionLearningReport", () => {
     expect(report.insightLine).toContain("last section");
   });
 
-  it("ignores zero chunk scores from empty summaries", () => {
+  it("keeps genuine zero grades in session feedback", () => {
     const report = buildSessionLearningReport({
       scorePercent: 60,
       avgScore30Day: null,
-      chunkScores: [{ chunkIndex: 0, aiScore: 0 }],
+      chunkScores: [{ chunkIndex: 0, aiScore: 0 }, { chunkIndex: 1, aiScore: 100 }],
+      vocabularyWordsAdded: 0,
+      questionResults: [],
+    });
+    expect(report.chunkSummaryAvg).toBe(50);
+    expect(report.weakestChunkIndex).toBe(0);
+  });
+
+  it("ignores ungraded summaries", () => {
+    const report = buildSessionLearningReport({
+      scorePercent: 60,
+      avgScore30Day: null,
+      chunkScores: [{ chunkIndex: 0, aiScore: null }],
       vocabularyWordsAdded: 0,
       questionResults: [],
     });

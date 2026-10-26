@@ -71,7 +71,7 @@ export default async function MonthlyReportPage() {
         where: {
           createdAt: { gte: dbCutoff },
           summaryText: { not: null },
-          aiScore: { gt: 0 },
+          aiScore: { not: null },
           session: { userId },
         },
         select: { aiScore: true, createdAt: true },

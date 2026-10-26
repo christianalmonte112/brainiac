@@ -18,6 +18,7 @@ import {
   buildNextActions,
   collectQuestionResultsFromAttempts,
   computeComprehensionScore,
+  classifyQuestionType,
   computeVocabularyMastery,
 } from "@/lib/progress/learningInsights";
 import { dueVocabularyWordsWhere } from "@/lib/games/dueWords";
@@ -129,7 +130,7 @@ export default async function ProgressPage() {
           where: {
             createdAt: { gte: thirtyDaysAgo },
             summaryText: { not: null },
-            aiScore: { gt: 0 },
+            aiScore: { not: null },
             session: { userId },
           },
           select: { aiScore: true },
@@ -192,6 +193,14 @@ export default async function ProgressPage() {
     sectionSummaries.flatMap((summary) => (summary.aiScore === null ? [] : [summary.aiScore])),
     questionResults,
   );
+
+  const summaryScores = sectionSummaries.flatMap((summary) => summary.aiScore === null ? [] : [summary.aiScore]);
+  const summaryAverage = computeComprehensionScore(summaryScores, []);
+  const understandingQuestions = questionResults.filter((result) =>
+    classifyQuestionType(result.prompt, result.orderIndex, result.questionCount) !== "recall",
+  );
+  const quizUnderstanding = computeComprehensionScore([], understandingQuestions);
+  const comprehensionDelta = comprehensionScore === null ? null : comprehensionScore - baseline.comprehensionScore;
 
   // F-021: re-evaluate and persist any newly-earned badges on every load —
   // see lib/badges/sync.ts for why this is "sync on read" rather than
@@ -263,6 +272,43 @@ export default async function ProgressPage() {
         <h1 className="text-2xl font-bold text-slate-900">Your progress</h1>
         <p className="mt-1 text-sm text-slate-500">Baseline taken {baseline.takenAt.toLocaleDateString()}.</p>
       </div>
+
+      <section aria-labelledby="comprehension-heading" className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="comprehension-heading" className="text-lg font-semibold text-slate-900">Reading comprehension</h2>
+            <p className="text-sm text-slate-600">Your understanding of what you read · last 30 days</p>
+          </div>
+          <Link href="/reader/progress/monthly" className="text-sm font-medium text-indigo-700 underline">Monthly report →</Link>
+        </div>
+        <p className="mt-4 text-4xl font-bold text-indigo-950">{comprehensionScore === null ? "Not scored yet" : `${comprehensionScore}%`}</p>
+        {comprehensionDelta !== null ? (
+          <p className="mt-2 text-sm text-slate-700">
+            {comprehensionDelta === 0 ? "Matches" : `${Math.abs(comprehensionDelta)} percentage points ${comprehensionDelta > 0 ? "above" : "below"}`} your initial assessment ({baseline.comprehensionScore}%).
+            Different passages and activities affect scores; this comparison alone does not prove improvement or decline.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-slate-700">Submit a section summary or answer comprehension questions in a quiz to start tracking your understanding.</p>
+        )}
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg bg-white p-3">
+            <dt className="text-sm font-medium text-slate-700">Summary accuracy and completeness</dt>
+            <dd className="mt-1 text-xl font-semibold">{summaryAverage === null ? "No grades yet" : `${summaryAverage}%`}</dd>
+            <dd className="text-sm text-slate-500">{summaryScores.length} graded summaries</dd>
+          </div>
+          <div className="rounded-lg bg-white p-3">
+            <dt className="text-sm font-medium text-slate-700">Quiz understanding</dt>
+            <dd className="mt-1 text-xl font-semibold">{quizUnderstanding === null ? "No answers yet" : `${quizUnderstanding}%`}</dd>
+            <dd className="text-sm text-slate-500">{understandingQuestions.filter((question) => question.isCorrect).length} of {understandingQuestions.length} comprehension and inference answers correct</dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-sm text-slate-600">
+          When both are available, summaries and quiz understanding each contribute half of your score.
+          Otherwise, we use the available part. Recall questions and ungraded summaries are excluded; genuine zero grades count.
+          This measures recent practice performance, not a school reading level.
+        </p>
+        <p className="mt-2 text-sm text-slate-600">To follow your progress, use the monthly report and compare your summary and quiz results over time. Repeated quiz attempts count as practice answers.</p>
+      </section>
 
       {baselineLooksBroken && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
