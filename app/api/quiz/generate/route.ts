@@ -115,7 +115,7 @@ export async function POST(request: Request) {
   const questions = await prisma.question.findMany({
     where: { quizId: quiz.id },
     orderBy: { orderIndex: "asc" },
-    select: { id: true, orderIndex: true, prompt: true, options: true, correctIndex: true, explanation: true },
+    select: { id: true, orderIndex: true, prompt: true, options: true },
   });
 
   return Response.json({ quizId: quiz.id, questions });

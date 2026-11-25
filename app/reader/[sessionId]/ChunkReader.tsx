@@ -9,7 +9,7 @@ import { ChunkTimer } from "./ChunkTimer";
 import { VocabularyPanel } from "./VocabularyPanel";
 import { HighlightTutor } from "./HighlightTutor";
 import { SocraticTutor } from "./SocraticTutor";
-import { QuizModal, type QuizQuestion } from "./QuizModal";
+import { WrittenCheck } from "./WrittenCheck";
 import { SummaryModal } from "./SummaryModal";
 
 interface ChunkReaderProps {
@@ -69,9 +69,9 @@ export function ChunkReader({
 
   // Quiz state
   const [quizOpen, setQuizOpen] = useState(false);
-  const [quizData, setQuizData] = useState<{ quizId: string; questions: QuizQuestion[] } | null>(null);
-  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
-  const [quizError, setQuizError] = useState<string | null>(null);
+
+  const isGeneratingQuiz = false;
+  const quizError: string | null = null;
 
   // Full-session summary state
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -88,29 +88,7 @@ export function ChunkReader({
     resetReadingTimer();
   }, [safeChunkIndex, resetReadingTimer]);
 
-  async function handleStartQuiz() {
-    setIsGeneratingQuiz(true);
-    setQuizError(null);
-    try {
-      const res = await fetch("/api/quiz/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { quizId: string; questions: QuizQuestion[] };
-      if (!Array.isArray(data.questions) || data.questions.length === 0) {
-        setQuizError("No quiz questions were generated for this document yet. Please try again.");
-        return;
-      }
-      setQuizData(data);
-      setQuizOpen(true);
-    } catch {
-      setQuizError("Couldn't generate quiz. Please try again.");
-    } finally {
-      setIsGeneratingQuiz(false);
-    }
-  }
+  function handleStartQuiz() { setQuizOpen(true); }
 
   async function handleGetSummary() {
     setIsGeneratingSummary(true);
@@ -176,7 +154,7 @@ export function ChunkReader({
               disabled={isGeneratingQuiz}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400"
             >
-              {isGeneratingQuiz ? "Generating…" : "Take Quiz"}
+              {isGeneratingQuiz ? "Generating…" : "Written check"}
             </button>
             <button
               type="button"
@@ -216,7 +194,7 @@ export function ChunkReader({
             disabled={isGeneratingQuiz}
             className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
-            {isGeneratingQuiz ? "Generating quiz…" : "📋 Take Quiz"}
+            {isGeneratingQuiz ? "Opening check…" : "📋 Written check"}
           </button>
           <button
             onClick={() => setSocraticOpen(true)}
@@ -335,13 +313,12 @@ export function ChunkReader({
       )}
 
       {/* Quiz Modal — full-screen overlay (z-[90], below Socratic tutor) */}
-      {quizOpen && quizData && (
-        <QuizModal
-          quizId={quizData.quizId}
-          questions={quizData.questions}
+      {quizOpen && (
+        <WrittenCheck
+          sessionId={sessionId}
           onClose={() => {
             setQuizOpen(false);
-            setQuizData(null);
+
           }}
         />
       )}
